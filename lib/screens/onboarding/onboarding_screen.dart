@@ -1,0 +1,203 @@
+import 'package:flutter/material.dart';
+import 'package:qwicky/screens/onboarding/phone_number_screen.dart';
+import 'dart:async';
+
+import 'package:qwicky/widgets/colors.dart';
+import 'package:qwicky/widgets/main_button.dart';
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  Timer? _timer;
+
+  // Sample slide data (replace with your actual content)
+  final List<Map<String, String>> _slides = [
+    {
+      'image': 'assets/slide1.png',
+      'title': 'What is Qwicky Services?',
+      'description': 'All-in-one solution for domestic, commercial, and corporate services',
+    },
+    {
+      'image': 'assets/slide2.png',
+      'title': 'Domestic Services',
+      'description': 'Trusted help for home care, babysitting, elder care & more.',
+    },
+    {
+      'image': 'assets/slide3.png',
+      'title': 'Commercial Services',
+      'description': 'Professional staff for hospitality, security, and more.',
+    },
+    {
+      'image': 'assets/slide4.png',
+      'title': 'Corporate Services',
+      'description': 'Corporate support staff for offices and operations.',
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Removed auto-scrolling timer - slides will only change when Next button is clicked
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onNextPressed() {
+    if (_currentPage < _slides.length - 1) {
+      setState(() {
+        _currentPage++;
+      });
+      //animation to move to the next page when button is clicked
+      _pageController.animateToPage(
+        _currentPage,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      // Navigate to the next screen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const PhoneNumberScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // Main content
+          Column(
+            children: [
+              // Slider
+              SizedBox(
+                height: screenHeight * 0.8,
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: _slides.length,
+                  onPageChanged: (int page) {
+                    setState(() {
+                      _currentPage = page;
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Image (40% of screen width/height)
+                        Image.asset(
+                          _slides[index]['image']!,
+                          width: screenWidth * 0.55,
+                          height: screenHeight * 0.55,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => const Icon(
+                            Icons.image_not_supported,
+                            size: 100,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        // Bold title
+                        Text(
+                          _slides[index]['title']!,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 10),
+                        // Regular description
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            _slides[index]['description']!,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.normal,
+                              color: Colors.black,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              const Spacer(),
+              // Indicators
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_slides.length, (index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _currentPage == index ? AppColors.primaryColor : AppColors.borderColor,
+                    ),
+                  );
+                }),
+              ),
+              SizedBox(height: screenHeight * 0.05),
+              // Using your MainButton implementation with proper width
+              MainButton(
+                text: _currentPage == _slides.length - 1 ? 'Get Started' : 'Next',
+                onPressed: _onNextPressed,
+              ),
+              SizedBox(height: screenHeight * 0.04),
+            ],
+          ),
+          // Skip button
+          Positioned(
+            top: 30,
+            right: 20,
+            child: OutlinedButton(
+              onPressed: () {
+                // Navigate to HomeScreen
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const PhoneNumberScreen()),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+                 minimumSize: Size(0, 30),
+              ),
+              child: const Text(
+                'Skip',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
