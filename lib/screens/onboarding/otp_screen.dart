@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:lottie/lottie.dart';
 import 'package:pinput/pinput.dart';
-import 'package:qwicky/screens/Main/home_screen.dart';
+import 'package:qwicky/screens/Main/location_permission_screen.dart';
 import 'package:qwicky/widgets/colors.dart';
 import 'package:qwicky/widgets/main_button.dart';
 
@@ -73,7 +73,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             ),
           );
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => HomeScreen()),
+            MaterialPageRoute(builder: (context) => LocationPermissionScreen()),
           );
         }
       } else {
@@ -162,8 +162,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     final height = MediaQuery.of(context).size.height;
 
     final defaultPinTheme = PinTheme(
-      width: 56,
-      height: 56,
+      width: height*0.1,
+      height: height*0.08,
       textStyle: const TextStyle(
         fontSize: 20,
         color: Colors.black,
@@ -195,9 +195,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 ),
               ),
               SizedBox(height: height * 0.03),
-              const Text(
+              Text(
                 'Please enter the verification code we just sent you',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: height*0.036, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: height * 0.04),
@@ -233,7 +233,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-              SizedBox(height: height * 0.08),
+              SizedBox(height: height * 0.12),
               MainButton(
                 text: _isVerifying ? '' : 'Verify',
                 onPressed: _isVerifying ? null : _verifyOtp,

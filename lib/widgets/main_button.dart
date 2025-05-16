@@ -10,7 +10,7 @@ class MainButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 25.0), 
+      padding: EdgeInsets.symmetric(horizontal:  MediaQuery.of(context).size.height * 0.02), 
       child: SizedBox(
         width: double.infinity,
         height: MediaQuery.of(context).size.height * 0.08,

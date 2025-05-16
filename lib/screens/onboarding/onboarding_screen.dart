@@ -44,7 +44,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    // Removed auto-scrolling timer - slides will only change when Next button is clicked
   }
 
   @override
@@ -115,8 +114,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         // Bold title
                         Text(
                           _slides[index]['title']!,
-                          style: const TextStyle(
-                            fontSize: 20,
+                          style:TextStyle(
+                            fontSize: screenHeight * 0.033,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
@@ -128,8 +127,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Text(
                             _slides[index]['description']!,
-                            style: const TextStyle(
-                              fontSize: 16,
+                            style: TextStyle(
+                              fontSize: screenHeight * 0.025,
                               fontWeight: FontWeight.normal,
                               color: Colors.black,
                             ),
@@ -168,8 +167,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           // Skip button
           Positioned(
-            top: 30,
-            right: 20,
+            top: screenHeight * 0.05,
+            right: screenHeight * 0.03,
             child: OutlinedButton(
               onPressed: () {
                 // Navigate to HomeScreen
@@ -186,11 +185,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
                  minimumSize: Size(0, 30),
               ),
-              child: const Text(
+              child:Text(
                 'Skip',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 12,
+                  fontSize: screenHeight * 0.02,
                   fontWeight: FontWeight.normal,
                 ),
               ),

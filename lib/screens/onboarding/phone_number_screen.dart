@@ -131,9 +131,9 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
                   left: height * 0.04,
                   right: height * 0.04,
                 ),
-                child: const Text(
+                child:Text(
                   'Enter your mobile number to continue',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: height * 0.04, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
               ),
