@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:qwicky/screens/Main/bloc/cart_block_part/cart_bloc.dart';
+import 'package:qwicky/screens/Main/bloc/service_part/service_bloc.dart';
 import 'package:qwicky/screens/onboarding/splash_screen.dart';
 
 void main() async{
@@ -16,13 +19,19 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Qwicky',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF2075C5)),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (context) => ServiceBloc()),
+        BlocProvider(create: (context) => CartBloc()),
+      ],
+      child: MaterialApp(
+        title: 'Qwicky',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF2075C5)),
+        ),
+        home: const SplashScreen(),
       ),
-      home: const SplashScreen(),
     );
   }
 }

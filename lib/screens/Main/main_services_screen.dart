@@ -1,0 +1,97 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:qwicky/screens/Main/bloc/service_part/service_bloc.dart';
+import 'package:qwicky/widgets/app_bart.dart';
+import 'package:qwicky/widgets/service_card.dart';
+
+class MainServicesScreen extends StatefulWidget {
+  final String address;
+  final String serviceType; 
+
+  const MainServicesScreen({
+    super.key,
+    required this.address,
+    required this.serviceType,
+  });
+
+  @override
+  State<MainServicesScreen> createState() => _MainServicesScreenState();
+}
+
+class _MainServicesScreenState extends State<MainServicesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<ServiceBloc>().add(LoadServices());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Determine title based on serviceType
+    String title;
+    switch (widget.serviceType) {
+      case 'Domestic':
+        title = 'Domestic Services';
+        break;
+      case 'Commercial':
+        title = 'Commercial Services';
+        break;
+      case 'Corporate':
+        title = 'Corporate Services';
+        break;
+      default:
+        title = 'Services';
+    }
+
+    return Scaffold(
+      appBar: CustomAppBar(
+        address: widget.address,
+        isBackButtonVisible: true,
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          Expanded(
+            child: BlocBuilder<ServiceBloc, ServiceState>(
+              builder: (context, state) {
+                if (state is ServiceLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (state is ServiceLoaded) {
+                  // Filter services by serviceType
+                  final filteredServices = state.services
+                      .where((service) => service.serviceType == widget.serviceType)
+                      .toList();
+                  if (filteredServices.isEmpty) {
+                    return const Center(child: Text('No services available for this category'));
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filteredServices.length,
+                    itemBuilder: (context, index) {
+                      final service = filteredServices[index];
+                      return ServiceCard(service: service);
+                    },
+                  );
+                } else if (state is ServiceError) {
+                  return Center(child: Text(state.message));
+                }
+                return const Center(child: Text('No services available'));
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
