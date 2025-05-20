@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:qwicky/models/service_model.dart';
 
 part 'service_event.dart';
@@ -14,62 +17,35 @@ class ServiceBloc extends Bloc<ServiceEvent, ServiceState> {
     print('ServiceBloc: Loading services...');
     emit(ServiceLoading());
     try {
-      // Dummy data with serviceType as Domestic, Commercial, Corporate
-      final services = [
-        ServiceModel(
-          serviceId: 1,
-          title: 'Home Cleaning',
-          description: 'Deep cleaning\nSanitization\nEco-friendly products',
-          image: 'assets/cleaning.jpg',
-          serviceType: 'Domestic',
-          serviceDuration: '2 hours',
-          price: 55.0,
-          isActive: true,
-          createdAt: DateTime.now(),
-          categoryId: 1,
-        ),
-        ServiceModel(
-          serviceId: 2,
-          title: 'Plumbing',
-          description: 'Leak repair\nPipe installation\nDrain cleaning',
-          image: 'assets/plumbing.jpg',
-          serviceType: 'Domestic',
-          serviceDuration: '3 hours',
-          price: 80.0,
-          isActive: true,
-          createdAt: DateTime.now(),
-          categoryId: 2,
-        ),
-        ServiceModel(
-          serviceId: 3,
-          title: 'Office Cleaning',
-          description: 'Commercial space cleaning\nCarpet cleaning\nWindow washing',
-          image: 'assets/office_cleaning.jpg',
-          serviceType: 'Commercial',
-          serviceDuration: '4 hours',
-          price: 120.0,
-          isActive: true,
-          createdAt: DateTime.now(),
-          categoryId: 3,
-        ),
-        ServiceModel(
-          serviceId: 4,
-          title: 'Corporate IT Setup',
-          description: 'Network setup\nHardware installation\nSecurity systems',
-          image: 'assets/it_setup.jpg',
-          serviceType: 'Corporate',
-          serviceDuration: '5 hours',
-          price: 200.0,
-          isActive: true,
-          createdAt: DateTime.now(),
-          categoryId: 4,
-        ),
-      ];
-      print('ServiceBloc: Emitting ServiceLoaded with ${services.length} services');
-      emit(ServiceLoaded(services));
+      // Get the API URL from .env
+      final String apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
+      final response = await http.get(Uri.parse('$apiUrl/services'));
+
+      if (response.statusCode == 200) {
+        // Parse the JSON response
+        final List<dynamic> jsonData = jsonDecode(response.body);
+        final services = jsonData.map((json) => ServiceModel(
+          serviceId: json['service_id'] as int,
+          title: json['service_title'] as String,
+          description: (json['description'] as List<dynamic>).join('\n'),
+          image: json['service_image'] as String,
+          serviceType: json['service_type'] as String,
+          serviceDuration: json['service_duration'] as String,
+          price: double.parse(json['service_price'] as String),
+          isActive: (json['is_active'] as int) == 1,
+          createdAt: DateTime.parse(json['created_at'] as String),
+          categoryId: json['category_id'] as String,
+        )).toList();
+
+        print('ServiceBloc: Emitting ServiceLoaded with ${services.length} services');
+        emit(ServiceLoaded(services));
+      } else {
+        print('ServiceBloc: Failed to load services, status code: ${response.statusCode}');
+        emit(ServiceError('Failed to load services: ${response.statusCode}'));
+      }
     } catch (e) {
       print('ServiceBloc: Error loading services: $e');
-      emit(ServiceError('Failed to load services'));
+      emit(ServiceError('Failed to load services: $e'));
     }
   }
 }

@@ -7,7 +7,7 @@ class ServiceModel{
   final double? price;
   final bool? isActive;
   final DateTime? createdAt;
-  final int? categoryId;
+  final String? categoryId;
   final String image; // Added for UI display
 
   ServiceModel({
