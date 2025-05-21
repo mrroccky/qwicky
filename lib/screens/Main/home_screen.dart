@@ -17,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0; // Default: Home
+  int _selectedIndex = 0;
 
   void _onItemTapped(int index) {
     setState(() {
@@ -27,15 +27,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // List of screens for navigation
+
     final List<Widget> screens = [
       HomeContent(address: widget.address),
       const HistoryScreen(),
-      ProfileScreen(address: widget.address),
+      ProfileScreen(address: widget.address,),
     ];
+
     return Scaffold(
       appBar: CustomAppBar(address: widget.address),
-      body: screens[_selectedIndex], // Display selected screen
+      body: screens[_selectedIndex],
       bottomNavigationBar: CustomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,

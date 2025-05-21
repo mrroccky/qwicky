@@ -12,22 +12,21 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    final height = MediaQuery.of(context).size.height;
     return AppBar(
       backgroundColor: Colors.transparent,
       automaticallyImplyLeading: false, // Disable default back arrow
       leading: isBackButtonVisible
-          ? IconButton(
-               icon: Image.asset(
-            'assets/back_arrow.png', // Custom back button image
-            width: width * 0.13,
-            height: height * 0.13,
-          ),
-              onPressed: () {
-                Navigator.pop(context); // Go back to previous screen
-              },
-            )
-          : null,
+    ? IconButton(
+        icon: Icon(
+          Icons.arrow_back,
+          color: Theme.of(context).primaryColor,
+          size: width * 0.08,
+        ),
+        onPressed: () {
+          Navigator.pop(context);
+        },
+      )
+    : null,
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

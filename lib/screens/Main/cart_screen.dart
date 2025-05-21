@@ -17,11 +17,11 @@ class CartScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: Image.asset(
-            'assets/back_arrow.png', // Custom back button image
-            width: width * 0.13,
-            height: height * 0.13,
-          ),
+          icon: Icon(
+          Icons.arrow_back,
+          color: Theme.of(context).primaryColor,
+          size: width * 0.08,
+        ),
           onPressed: () {
             Navigator.pop(context); // Go back to previous screen
           },

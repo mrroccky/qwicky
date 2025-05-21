@@ -1,3 +1,4 @@
+// lib/widgets/field_boxes.dart
 import 'package:flutter/material.dart';
 import 'package:qwicky/widgets/colors.dart';
 
@@ -22,6 +23,8 @@ class FieldBoxes extends StatelessWidget {
   final String? dropdownValue1;
   final ValueChanged<String?>? onDropdownChanged1;
   final String? Function(String?)? dropdownValidator1;
+  final bool readOnly1;
+  final bool readOnly2;
 
   const FieldBoxes({
     super.key,
@@ -45,6 +48,8 @@ class FieldBoxes extends StatelessWidget {
     this.dropdownValue1,
     this.onDropdownChanged1,
     this.dropdownValidator1,
+    this.readOnly1 = false,
+    this.readOnly2 = false,
   });
 
   @override
@@ -53,7 +58,7 @@ class FieldBoxes extends StatelessWidget {
 
     if (isDoubleField) {
       return Padding(
-        padding: EdgeInsets.only(left:height * 0.02, right: height * 0.02),
+        padding: EdgeInsets.only(left: height * 0.02, right: height * 0.02),
         child: Row(
           children: [
             Expanded(
@@ -73,6 +78,7 @@ class FieldBoxes extends StatelessWidget {
                 dropdownValue: dropdownValue1,
                 onDropdownChanged: onDropdownChanged1,
                 dropdownValidator: dropdownValidator1,
+                readOnly: readOnly1,
               ),
             ),
             SizedBox(width: height * 0.02),
@@ -86,6 +92,7 @@ class FieldBoxes extends StatelessWidget {
                 validator: validator2,
                 keyboardType: keyboardType2,
                 maxLines: maxLines2,
+                readOnly: readOnly2,
               ),
             ),
           ],
@@ -93,7 +100,7 @@ class FieldBoxes extends StatelessWidget {
       );
     } else {
       return Padding(
-        padding: EdgeInsets.only(left:height * 0.02, right: height * 0.02),
+        padding: EdgeInsets.only(left: height * 0.02, right: height * 0.02),
         child: _buildField(
           context,
           controller: controller1,
@@ -109,6 +116,7 @@ class FieldBoxes extends StatelessWidget {
           dropdownValue: dropdownValue1,
           onDropdownChanged: onDropdownChanged1,
           dropdownValidator: dropdownValidator1,
+          readOnly: readOnly1,
         ),
       );
     }
@@ -129,10 +137,11 @@ class FieldBoxes extends StatelessWidget {
     String? dropdownValue,
     ValueChanged<String?>? onDropdownChanged,
     String? Function(String?)? dropdownValidator,
+    bool readOnly = false,
   }) {
     final inputDecoration = InputDecoration(
       labelText: label,
-      prefixIcon: icon != null ? Icon(icon, color: Colors.black,) : null,
+      prefixIcon: icon != null ? Icon(icon, color: Colors.black) : null,
       suffixIcon: suffixIcon,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
@@ -154,7 +163,7 @@ class FieldBoxes extends StatelessWidget {
       return LayoutBuilder(
         builder: (context, constraints) {
           return Container(
-            constraints: BoxConstraints(minHeight: 48),
+            constraints: const BoxConstraints(minHeight: 48),
             child: DropdownButtonFormField<String>(
               value: dropdownValue,
               decoration: inputDecoration,
@@ -167,20 +176,20 @@ class FieldBoxes extends StatelessWidget {
                       item,
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
-                      style:TextStyle(
+                      style: TextStyle(
                         fontSize: MediaQuery.of(context).size.height * 0.02,
-                        height: 1.4, 
+                        height: 1.4,
                       ),
                       strutStyle: StrutStyle(
                         fontSize: MediaQuery.of(context).size.height * 0.02,
                         height: 1.4,
                         leading: 0.5,
-                      ), // Prevent vertical clipping
+                      ),
                     ),
                   ),
                 );
               }).toList(),
-              onChanged: onDropdownChanged,
+              onChanged: readOnly ? null : onDropdownChanged,
               validator: dropdownValidator,
               selectedItemBuilder: (context) {
                 return dropdownItems!.map((item) {
@@ -203,7 +212,7 @@ class FieldBoxes extends StatelessWidget {
                   );
                 }).toList();
               },
-              menuMaxHeight: 200, 
+              menuMaxHeight: 200,
               isExpanded: true,
             ),
           );
@@ -218,6 +227,7 @@ class FieldBoxes extends StatelessWidget {
       keyboardType: keyboardType,
       maxLines: maxLines,
       obscureText: obscureText,
+      readOnly: readOnly,
     );
   }
 }

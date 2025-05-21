@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'package:qwicky/provider/user_provider.dart';
 import 'package:qwicky/screens/Main/bloc/cart_block_part/cart_bloc.dart';
 import 'package:qwicky/screens/Main/bloc/service_part/service_bloc.dart';
 import 'package:qwicky/screens/onboarding/splash_screen.dart';
@@ -21,6 +23,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
+        ChangeNotifierProvider(create: (context) => UserProvider()),
         BlocProvider(create: (context) => ServiceBloc()),
         BlocProvider(create: (context) => CartBloc()),
       ],

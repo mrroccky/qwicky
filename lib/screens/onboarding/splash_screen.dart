@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:qwicky/screens/onboarding/onboarding_screen.dart';
+import 'package:qwicky/screens/Main/location_permission_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -10,8 +11,7 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _qSizeAnimation;
   late Animation<Offset> _qPositionAnimation;
@@ -36,13 +36,10 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Animation for "Q" position (center to very slightly left for tight spacing)
+    // Animation for "Q" position
     _qPositionAnimation = Tween<Offset>(
       begin: const Offset(0.0, 0.0),
-      end: const Offset(
-        -0.02,
-        0.0,
-      ), // Minimal left movement for "Qwicky" cohesion
+      end: const Offset(-0.02, 0.0),
     ).animate(
       CurvedAnimation(
         parent: _animationController,
@@ -50,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Animation for "wicky" opacity (hidden to visible)
+    // Animation for "wicky" opacity
     _wickyOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
@@ -58,7 +55,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Animation for logo opacity (hidden to visible)
+    // Animation for logo opacity
     _logoOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
@@ -69,16 +66,26 @@ class _SplashScreenState extends State<SplashScreen>
     // Start animation and navigate after completion
     _animationController.forward().then((_) {
       Timer(const Duration(milliseconds: 500), () {
-        navigateToOnboarding();
+        _checkLoginStatus();
       });
     });
   }
 
-  void navigateToOnboarding() {
-    // Navigate to onboarding screen
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-    );
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    if (isLoggedIn) {
+      // Navigate to LocationPermissionScreen if logged in
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const LocationPermissionScreen()),
+      );
+    } else {
+      // Navigate to OnboardingScreen (which leads to PhoneNumberScreen) if not logged in
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+      );
+    }
   }
 
   @override
@@ -105,13 +112,13 @@ class _SplashScreenState extends State<SplashScreen>
                   child: FadeTransition(
                     opacity: _logoOpacityAnimation,
                     child: Container(
-                      width: 160, // Increased size to show border
+                      width: 160,
                       height: 160,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white, // White border color
-                          width: 0.5, // Border thickness
+                          color: Colors.white,
+                          width: 0.5,
                         ),
                       ),
                       child: Padding(
@@ -122,12 +129,11 @@ class _SplashScreenState extends State<SplashScreen>
                             width: 150,
                             height: 150,
                             fit: BoxFit.cover,
-                            errorBuilder:
-                                (context, error, stackTrace) => const Icon(
-                                  Icons.image_not_supported,
-                                  size: 50,
-                                  color: Colors.white,
-                                ),
+                            errorBuilder: (context, error, stackTrace) => const Icon(
+                              Icons.image_not_supported,
+                              size: 50,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -137,38 +143,30 @@ class _SplashScreenState extends State<SplashScreen>
                 // Text with animations
                 Center(
                   child: Row(
-                    mainAxisSize: MainAxisSize.min, // Keeps Row tight
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Animated "Q"
                       Transform.translate(
-                        offset:
-                            _qPositionAnimation.value *
-                            MediaQuery.of(context).size.width,
+                        offset: _qPositionAnimation.value * MediaQuery.of(context).size.width,
                         child: Transform.scale(
-                          scale:
-                              1.0 +
-                              _qSizeAnimation.value *
-                                  2.0, // Big Q becoming smaller
-                          child:Text(
+                          scale: 1.0 + _qSizeAnimation.value * 2.0,
+                          child: Text(
                             "Q",
                             style: TextStyle(
-                              fontSize: screenHeight*0.07,
+                              fontSize: screenHeight * 0.07,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
                         ),
                       ),
-                      // Minimal spacing
                       const SizedBox(width: 4),
-                      // appears after Q animation
                       FadeTransition(
                         opacity: _wickyOpacityAnimation,
                         child: Text(
                           "wicky",
                           style: TextStyle(
-                            fontSize: screenHeight*0.07,
+                            fontSize: screenHeight * 0.07,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),

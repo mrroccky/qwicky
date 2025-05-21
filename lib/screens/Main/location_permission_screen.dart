@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, deprecated_member_use
+// ignore_for_file: use_build_context_synchronously, avoid_print
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -7,6 +7,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:lottie/lottie.dart';
 import 'package:qwicky/screens/Main/home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:qwicky/provider/user_provider.dart';
 
 class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key});
@@ -19,8 +22,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   String _status = 'Fetching your location.';
   String? _address;
   late AnimationController _dotsController;
-
-  // LocationIQ API key
   final String? _locationIqApiKey = dotenv.env['LOCATION_API_KEY'];
 
   @override
@@ -30,78 +31,93 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat();
-    _requestLocationPermission();
+    _fetchUserData(); 
+    _requestLocationPermission(); 
   }
 
-  Future<void> _requestLocationPermission() async {
-  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  print("Location service enabled: $serviceEnabled");
+  Future<void> _fetchUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phoneNumber = prefs.getString('phoneNumber');
+      print('Retrieved phone number from SharedPreferences: $phoneNumber');
 
-  if (!serviceEnabled) {
-    // Show dialog to enable location
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Enable Location Services'),
-        content: const Text('Location services are disabled. Please enable them to continue.'),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await Geolocator.openLocationSettings();
+      if (phoneNumber != null && phoneNumber.isNotEmpty) {
+        final formattedPhone = phoneNumber.trim().replaceAll(RegExp(r'\s+'), '');
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-              // Wait and check again after coming back from settings
-              Future.delayed(const Duration(seconds: 2), () async {
-                bool serviceEnabledAfter = await Geolocator.isLocationServiceEnabled();
-                print("Service enabled after returning from settings: $serviceEnabledAfter");
-
-                if (serviceEnabledAfter) {
-                  // Proceed to permission check
-                  _requestLocationPermission();
-                } else {
-                  // Still disabled, show the dialog again
-                  _requestLocationPermission();
-                }
-              });
-            },
-            child: const Text('Enable'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-    return;
-  }
-
-  LocationPermission permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied) {
-    permission = await Geolocator.requestPermission();
-    print("Requested permission status: $permission");
-    if (permission == LocationPermission.denied) {
-      _showPermissionDialog('Location permission is required to proceed.');
-      return;
+        print('Fetching user data for phone: $formattedPhone');
+        await userProvider.checkUserByPhone(formattedPhone);
+        print('User data after fetch: ${userProvider.userData}');
+      } else {
+        print('No phone number found in SharedPreferences');
+      }
+    } catch (e) {
+      print('Error fetching user data: $e');
     }
   }
 
-  if (permission == LocationPermission.deniedForever) {
-    print("Permission permanently denied");
-    _showPermissionDialog(
-      'Location permissions are permanently denied. Please enable them in settings.',
-      openSettings: true,
-    );
-    return;
+  Future<void> _requestLocationPermission() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    print("Location service enabled: $serviceEnabled");
+
+    if (!serviceEnabled) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Enable Location Services'),
+          content: const Text('Location services are disabled. Please enable them to continue.'),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await Geolocator.openLocationSettings();
+
+                Future.delayed(const Duration(seconds: 2), () async {
+                  bool serviceEnabledAfter = await Geolocator.isLocationServiceEnabled();
+                  print("Service enabled after returning from settings: $serviceEnabledAfter");
+
+                  if (serviceEnabledAfter) {
+                    _requestLocationPermission();
+                  } else {
+                    _requestLocationPermission();
+                  }
+                });
+              },
+              child: const Text('Enable'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      print("Requested permission status: $permission");
+      if (permission == LocationPermission.denied) {
+        _showPermissionDialog('Location permission is required to proceed.');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      print("Permission permanently denied");
+      _showPermissionDialog(
+        'Location permissions are permanently denied. Please enable them in settings.',
+        openSettings: true,
+      );
+      return;
+    }
+
+    print("Permission granted. Fetching location...");
+    _fetchLocation();
   }
-
-  // Permission granted, fetch location
-  print("Permission granted. Fetching location...");
-  _fetchLocation();
-}
-
-
 
   Future<void> _fetchLocation() async {
     try {
@@ -114,17 +130,13 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
       double lat = position.latitude;
       double lon = position.longitude;
 
-      // LocationIQ reverse geocoding API
       final url = 'https://api.locationiq.com/v1/reverse?key=$_locationIqApiKey&lat=$lat&lon=$lon&format=json';
 
-      final response = await http.get(
-        Uri.parse(url),
-      );
+      final response = await http.get(Uri.parse(url));
       print("Response body: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        // Construct address from components
         final addressComponents = data['address'] ?? {};
         List addressParts = [
           addressComponents['house_number'] ?? '',
@@ -152,7 +164,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
         if (mounted) {
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>HomeScreen(address: address,),
+              pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(address: address),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
                 const begin = Offset(1.0, 0.0);
                 const end = Offset.zero;

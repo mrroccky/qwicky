@@ -7,6 +7,7 @@ import 'package:pinput/pinput.dart';
 import 'package:qwicky/screens/Main/location_permission_screen.dart';
 import 'package:qwicky/widgets/colors.dart';
 import 'package:qwicky/widgets/main_button.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String phoneNumber;
@@ -30,6 +31,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final TextEditingController _otpController = TextEditingController();
   bool _isVerifying = false;
   String? _verificationError;
+  bool _verificationSuccessful = false;
 
   Future<void> _verifyOtp() async {
     if (_otpController.text.length != 6) {
@@ -66,22 +68,35 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
       if (response.statusCode == 200 && responseData['status'] == 'approved') {
         // OTP verified successfully
-        if (mounted) {
+        setState(() {
+          _verificationSuccessful = true;
+        });
+
+        // Store isLoggedIn flag and phone number in SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('phoneNumber', widget.phoneNumber);
+
+        print('OTP verified for phone: ${widget.phoneNumber}');
+
+        if (mounted && _verificationSuccessful) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Phone number verified successfully!'),
+              duration: Duration(seconds: 2),
             ),
           );
+
+          // Navigate to LocationPermissionScreen
+          await Future.delayed(const Duration(milliseconds: 300));
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => LocationPermissionScreen()),
+            MaterialPageRoute(builder: (context) => const LocationPermissionScreen()),
           );
         }
       } else {
-        // Handle verification error
         setState(() {
           _verificationError =
-              responseData['message'] ??
-              'Failed to verify OTP. Please try again.';
+              responseData['message'] ?? 'Failed to verify OTP. Please try again.';
         });
       }
     } catch (e) {
@@ -89,9 +104,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         _verificationError = 'An error occurred: $e';
       });
     } finally {
-      setState(() {
-        _isVerifying = false;
-      });
+      if (mounted && !_verificationSuccessful) {
+        setState(() {
+          _isVerifying = false;
+        });
+      }
     }
   }
 
@@ -102,11 +119,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
 
     try {
-      // Encode credentials for Basic Auth
       final String basicAuth =
           'Basic ${base64Encode(utf8.encode('${widget.twilioAccountSid}:${widget.twilioAuthToken}'))}';
 
-      // Create request to Twilio Verify API to resend OTP
       final response = await http.post(
         Uri.parse(
           'https://verify.twilio.com/v2/Services/${widget.twilioServiceSid}/Verifications',
@@ -121,18 +136,14 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         },
       );
 
-      // Check response
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // OTP resent successfully
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('OTP resent successfully!')),
           );
-          // Clear the OTP input field
           _otpController.clear();
         }
       } else {
-        // Handle error
         final Map<String, dynamic> responseData = json.decode(response.body);
         setState(() {
           _verificationError =
@@ -162,8 +173,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     final height = MediaQuery.of(context).size.height;
 
     final defaultPinTheme = PinTheme(
-      width: height*0.1,
-      height: height*0.08,
+      width: height * 0.1,
+      height: height * 0.08,
       textStyle: const TextStyle(
         fontSize: 20,
         color: Colors.black,
@@ -197,7 +208,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               SizedBox(height: height * 0.03),
               Text(
                 'Please enter the verification code we just sent you',
-                style: TextStyle(fontSize: height*0.036, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: height * 0.036, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: height * 0.04),
