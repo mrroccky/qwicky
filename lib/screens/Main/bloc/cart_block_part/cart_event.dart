@@ -17,10 +17,19 @@ class AddServiceToCart extends CartEvent {
 }
 
 class RemoveServiceFromCart extends CartEvent {
-  final ServiceModel service;
+  final String uniqueKey;
 
-  const RemoveServiceFromCart(this.service);
+  const RemoveServiceFromCart(this.uniqueKey);
 
   @override
-  List<Object> get props => [service];
+  List<Object> get props => [uniqueKey];
+}
+
+class LoadCartFromBackend extends CartEvent {
+  final List<ServiceModel> services;
+
+  const LoadCartFromBackend(this.services);
+
+  @override
+  List<Object> get props => [services];
 }

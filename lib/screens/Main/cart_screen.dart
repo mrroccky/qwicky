@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
 import 'package:qwicky/screens/Main/bloc/cart_block_part/cart_bloc.dart';
+import 'package:qwicky/screens/Main/payment_screen.dart';
 import 'package:qwicky/widgets/cart_card.dart';
+import 'package:qwicky/widgets/cart_item.dart';
 import 'package:qwicky/widgets/colors.dart';
+import 'package:qwicky/widgets/datetime_picker.dart';
 import 'package:qwicky/widgets/main_button.dart';
+import 'package:intl/intl.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -13,17 +17,18 @@ class CartScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: Icon(
-          Icons.arrow_back,
-          color: Theme.of(context).primaryColor,
-          size: width * 0.08,
-        ),
+            Icons.arrow_back,
+            color: Theme.of(context).primaryColor,
+            size: width * 0.08,
+          ),
           onPressed: () {
-            Navigator.pop(context); // Go back to previous screen
+            Navigator.pop(context);
           },
         ),
       ),
@@ -46,7 +51,32 @@ class CartScreen extends StatelessWidget {
             ),
             BlocBuilder<CartBloc, CartState>(
               builder: (context, state) {
-                // Empty cart UI
+                if (state is CartError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Lottie.asset(
+                          'assets/empty_cart.json',
+                          width: width * 0.5,
+                          height: height * 0.4,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text(
+                            state.message,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.secondTextColor,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 if (state is CartInitial || (state is CartLoaded && state.items.isEmpty)) {
                   return Center(
                     child: Column(
@@ -59,26 +89,33 @@ class CartScreen extends StatelessWidget {
                         ),
                         Text(
                           'Please add services to see',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.secondTextColor),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.secondTextColor,
+                          ),
                         ),
                       ],
                     ),
                   );
                 }
-                // Cart with items
+                final cartItems = (state as CartLoaded).items;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ListView.builder(
-                      shrinkWrap: true, // Take only needed height
+                      shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
-                      itemCount: (state as CartLoaded).items.length,
+                      itemCount: cartItems.length,
                       itemBuilder: (context, index) {
-                        final item = (state).items[index];
+                        final item = cartItems[index];
                         return CartItemCard(
-                          service: item.key,
-                          quantity: item.value,
+                          cartItem: item.value,
+                          uniqueKey: item.key,
+                          onRemove: () {
+                            context.read<CartBloc>().add(RemoveServiceFromCart(item.key));
+                          },
                         );
                       },
                     ),
@@ -98,7 +135,6 @@ class CartScreen extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: height * 0.02),
-                    // Total Amount Section
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: height * 0.03, vertical: height * 0.02),
                       child: Column(
@@ -121,7 +157,7 @@ class CartScreen extends StatelessWidget {
                                     style: TextStyle(fontSize: height * 0.02),
                                   ),
                                   Text(
-                                    (state).items.fold(0, (sum, item) => sum + item.value).toString(),
+                                    cartItems.fold(0, (sum, item) => sum + item.value.quantity).toString(),
                                     style: TextStyle(fontSize: height * 0.02),
                                   ),
                                 ],
@@ -135,7 +171,7 @@ class CartScreen extends StatelessWidget {
                                     style: TextStyle(fontSize: height * 0.02),
                                   ),
                                   Text(
-                                    "₹${(state).items.fold(0.0, (sum, item) => sum + item.key.price! * item.value).toStringAsFixed(2)}",
+                                    "₹${cartItems.fold(0.0, (sum, item) => sum + (item.value.service.price! * item.value.quantity)).toStringAsFixed(2)}",
                                     style: TextStyle(fontSize: height * 0.02),
                                   ),
                                 ],
@@ -148,7 +184,18 @@ class CartScreen extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: height * 0.02),
-                    MainButton(text: "Checkout", onPressed: () {}),
+                    MainButton(
+                      text: "Checkout",
+                      onPressed: () {
+                        if (cartItems.isNotEmpty) {
+                          _showDateTimePicker(context, cartItems);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Cart is empty')),
+                          );
+                        }
+                      },
+                    ),
                     SizedBox(height: height * 0.02),
                   ],
                 );
@@ -159,9 +206,68 @@ class CartScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _showDateTimePicker(BuildContext context, List<MapEntry<String, CartItem>> cartItems) {
+    // Store the scaffold context to use for navigation
+    final scaffoldContext = context;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return DateTimePickerWidget<MapEntry<String, CartItem>>(
+          items: cartItems,
+          itemNameGetter: (item) => item.value.service.title,
+          onConfirm: (List<DateTime?> selectedDateTimes) {
+            try {
+              // Validate selectedDateTimes
+              if (selectedDateTimes.any((dt) => dt == null)) {
+                ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+                  const SnackBar(content: Text('Please select a date and time for all items')),
+                );
+                return;
+              }
+
+              // Calculate total amount
+              double totalAmount = cartItems.fold(0.0, (sum, item) => sum + (item.value.service.price! * item.value.quantity));
+
+              // Log details
+              print('Checkout Details:');
+              for (int i = 0; i < cartItems.length; i++) {
+                final cartItem = cartItems[i].value;
+                print('Service ID: ${cartItem.service.serviceId}');
+                print('Service Name: ${cartItem.service.title}');
+                print('Quantity: ${cartItem.quantity}');
+                print('Unique Key: ${cartItems[i].key}');
+                print('Date and Time: ${DateFormat('yyyy-MM-dd HH:mm').format(selectedDateTimes[i]!)}');
+              }
+              print('Total Amount: ₹${totalAmount.toStringAsFixed(2)}');
+
+              // Close the dialog
+              Navigator.of(dialogContext).pop();
+
+              // Navigate to PaymentScreen using scaffoldContext
+              Navigator.of(scaffoldContext).push(
+                MaterialPageRoute(
+                  builder: (context) => PaymentScreen(
+                    cartItems: cartItems,
+                    selectedDateTimes: selectedDateTimes.cast<DateTime>(), // Cast to List<DateTime>
+                    totalAmount: totalAmount,
+                  ),
+                ),
+              );
+            } catch (e) {
+              print('Error in onConfirm: $e');
+              ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+                SnackBar(content: Text('Error during checkout: $e')),
+              );
+            }
+          },
+        );
+      },
+    );
+  }
 }
 
-// Dashed Divider Widget
 class DashedDivider extends StatelessWidget {
   final Color color;
   final double height;

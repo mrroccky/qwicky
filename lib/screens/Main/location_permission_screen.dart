@@ -6,10 +6,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:lottie/lottie.dart';
+import 'package:qwicky/models/service_model.dart';
+import 'package:qwicky/provider/user_provider.dart';
+import 'package:qwicky/screens/Main/bloc/cart_block_part/cart_bloc.dart';
 import 'package:qwicky/screens/Main/home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
-import 'package:qwicky/provider/user_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key});
@@ -31,8 +34,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat();
-    _fetchUserData(); 
-    _requestLocationPermission(); 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchUserData();
+      _requestLocationPermission();
+    });
   }
 
   Future<void> _fetchUserData() async {
@@ -48,11 +53,74 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
         print('Fetching user data for phone: $formattedPhone');
         await userProvider.checkUserByPhone(formattedPhone);
         print('User data after fetch: ${userProvider.userData}');
+
+        // Verify userId in SharedPreferences
+        final userId = prefs.getString('userId');
+        if (userId != null) {
+          print('Confirmed userId in SharedPreferences: $userId');
+        } else {
+          print('Error: userId not found in SharedPreferences after checkUserByPhone');
+          return;
+        }
+
+        // Load cart items from service_items_id
+        final userData = userProvider.userData;
+        if (userData != null && userData['service_items_id'] != null) {
+          final List<dynamic> serviceItemsId = jsonDecode(userData['service_items_id']);
+          final List<ServiceModel> services = [];
+          for (var serviceId in serviceItemsId) {
+            final service = await _fetchServiceById(serviceId);
+            if (service != null) {
+              services.add(service);
+            }
+          }
+          if (services.isNotEmpty) {
+            print('Loading cart with services: ${services.map((s) => s.serviceId).toList()}');
+            context.read<CartBloc>().add(LoadCartFromBackend(services));
+          } else {
+            print('No services found in service_items_id: $serviceItemsId');
+          }
+        } else {
+          print('No service_items_id found in userData: $userData');
+        }
       } else {
-        print('No phone number found in SharedPreferences');
+        print('Error: No phone number found in SharedPreferences');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Error fetching user data: $e');
+      print('Stack trace: $stackTrace');
+    }
+  }
+
+  Future<ServiceModel?> _fetchServiceById(int serviceId) async {
+    try {
+      final String apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
+      final response = await http.get(
+        Uri.parse('$apiUrl/services/$serviceId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        print('Fetched service data: $jsonData');
+        return ServiceModel(
+          serviceId: jsonData['service_id'] as int,
+          title: jsonData['service_title'],
+          description: (jsonData['description'] as List<dynamic>).join('\n'),
+          image: jsonData['service_image'],
+          serviceType: jsonData['service_type'],
+          serviceDuration: jsonData['service_duration'],
+          price: double.parse(jsonData['service_price'].toString()),
+          isActive: (jsonData['is_active'] as int) == 1,
+          createdAt: DateTime.parse(jsonData['created_at']),
+          categoryId: jsonData['category_id'],
+        );
+      }
+      print('Failed to fetch service $serviceId: ${response.statusCode}');
+      return null;
+    } catch (e, stackTrace) {
+      print('Error fetching service $serviceId: $e');
+      print('Stack trace: $stackTrace');
+      return null;
     }
   }
 
@@ -136,7 +204,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
       print("Response body: ${response.body}");
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = jsonDecode(response.body);
         final addressComponents = data['address'] ?? {};
         List addressParts = [
           addressComponents['house_number'] ?? '',
@@ -185,8 +253,9 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
           _status = 'Failed to fetch address';
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print("Error fetching location: $e");
+      print("Stack trace: $stackTrace");
       setState(() {
         _status = 'Error: $e';
       });

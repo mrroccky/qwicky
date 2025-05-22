@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:qwicky/models/service_model.dart';
-import 'package:qwicky/screens/Main/bloc/cart_block_part/cart_bloc.dart';
+import 'package:qwicky/widgets/cart_item.dart';
 import 'package:qwicky/widgets/colors.dart';
 
 class CartItemCard extends StatelessWidget {
-  final ServiceModel service;
-  final int quantity;
+  final CartItem cartItem;
+  final String uniqueKey;
+  final VoidCallback onRemove;
 
   const CartItemCard({
     super.key,
-    required this.service,
-    required this.quantity,
+    required this.cartItem,
+    required this.uniqueKey,
+    required this.onRemove,
   });
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
+    final service = cartItem.service;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -59,7 +60,7 @@ class CartItemCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '$quantity Service${quantity > 1 ? 's' : ''}',
+                          '${cartItem.quantity} Service${cartItem.quantity > 1 ? 's' : ''}',
                           style: TextStyle(
                             fontSize: 14,
                             color: AppColors.secondTextColor,
@@ -72,14 +73,12 @@ class CartItemCard extends StatelessWidget {
                             color: AppColors.primaryColor,
                             size: 24,
                           ),
-                          onPressed: () {
-                            context.read<CartBloc>().add(RemoveServiceFromCart(service));
-                          },
+                          onPressed: onRemove,
                         ),
                       ],
                     ),
                     Text(
-                      '₹${service.price! * quantity}',
+                      '₹${(service.price! * cartItem.quantity).toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: height * 0.025,
                         fontWeight: FontWeight.bold,

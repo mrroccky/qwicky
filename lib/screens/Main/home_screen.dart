@@ -7,6 +7,7 @@ import 'package:qwicky/widgets/colors.dart';
 import 'package:qwicky/widgets/home_content_part.dart';
 import 'package:qwicky/widgets/nav_bar.dart';
 import 'package:qwicky/widgets/service_item.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   final String address;
@@ -18,6 +19,26 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  int? _userId;
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId(); 
+  }
+
+  // Fetch userId from SharedPreferences
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userIdString = prefs.getString('userId');
+    if (userIdString != null) {
+      setState(() {
+        _userId = int.tryParse(userIdString); // Convert string to int
+      });
+      print('Loaded userId from SharedPreferences: $_userId');
+    } else {
+      print('No userId found in SharedPreferences');
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -30,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final List<Widget> screens = [
       HomeContent(address: widget.address),
-      const HistoryScreen(),
+      HistoryScreen(userId: _userId,),
       ProfileScreen(address: widget.address,),
     ];
 

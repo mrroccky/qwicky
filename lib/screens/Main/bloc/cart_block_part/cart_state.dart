@@ -10,10 +10,19 @@ abstract class CartState extends Equatable {
 class CartInitial extends CartState {}
 
 class CartLoaded extends CartState {
-  final List<MapEntry<ServiceModel, int>> items; // Service and quantity
+  final List<MapEntry<String, CartItem>> items;
 
   const CartLoaded(this.items);
 
   @override
   List<Object> get props => [items];
+}
+
+class CartError extends CartState {
+  final String message;
+
+  const CartError(this.message);
+
+  @override
+  List<Object> get props => [message];
 }

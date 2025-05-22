@@ -16,17 +16,17 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.transparent,
       automaticallyImplyLeading: false, // Disable default back arrow
       leading: isBackButtonVisible
-    ? IconButton(
-        icon: Icon(
-          Icons.arrow_back,
-          color: Theme.of(context).primaryColor,
-          size: width * 0.08,
-        ),
-        onPressed: () {
-          Navigator.pop(context);
-        },
-      )
-    : null,
+          ? IconButton(
+              icon: Icon(
+                Icons.arrow_back,
+                color: Theme.of(context).primaryColor,
+                size: width * 0.08,
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            )
+          : null,
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -54,7 +54,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             builder: (context, state) {
               int itemCount = 0;
               if (state is CartLoaded) {
-                itemCount = state.items.fold(0, (sum, item) => sum + item.value);
+                itemCount = state.items.fold(0, (sum, item) => sum + item.value.quantity);
               }
               return GestureDetector(
                 onTap: () {
