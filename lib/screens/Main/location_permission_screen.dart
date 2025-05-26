@@ -25,7 +25,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   String _status = 'Fetching your location.';
   String? _address;
   late AnimationController _dotsController;
-  final String? _locationIqApiKey = dotenv.env['LOCATION_API_KEY'];
+  final String? _locationIqApiKey = dotenv.env['GMAP_LOCATION_API_KEY'];
 
   @override
   void initState() {
@@ -188,39 +188,26 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   }
 
   Future<void> _fetchLocation() async {
-    try {
-      print("Calling Geolocator.getCurrentPosition...");
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      print("Position received: ${position.latitude}, ${position.longitude}");
+  try {
+    print("Calling Geolocator.getCurrentPosition...");
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    print("Position received: ${position.latitude}, ${position.longitude}");
 
-      double lat = position.latitude;
-      double lon = position.longitude;
+    double lat = position.latitude;
+    double lon = position.longitude;
 
-      final url = 'https://api.locationiq.com/v1/reverse?key=$_locationIqApiKey&lat=$lat&lon=$lon&format=json';
+    final url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lon&key=$_locationIqApiKey';
 
-      final response = await http.get(Uri.parse(url));
-      print("Response body: ${response.body}");
+    final response = await http.get(Uri.parse(url));
+    print("Response body: ${response.body}");
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final addressComponents = data['address'] ?? {};
-        List addressParts = [
-          addressComponents['house_number'] ?? '',
-          addressComponents['road'] ?? '',
-          addressComponents['neighbourhood'] ?? '',
-          addressComponents['suburb'] ?? '',
-          addressComponents['city'] ?? addressComponents['town'] ?? addressComponents['village'] ?? '',
-          addressComponents['state'] ?? '',
-          addressComponents['postcode'] ?? '',
-          addressComponents['country'] ?? '',
-        ].where((part) => part.isNotEmpty).toList();
-
-        String address = addressParts.join(', ');
-        if (address.isEmpty) {
-          address = 'Unknown address';
-        }
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['status'] == 'OK' && data['results'] != null && data['results'].isNotEmpty) {
+        // Use formatted_address for a complete, human-readable address
+        String address = data['results'][0]['formatted_address'] ?? 'Unknown address';
         print("Fetched address: $address");
 
         setState(() {
@@ -248,20 +235,26 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
           );
         }
       } else {
-        print("Failed to fetch address from API: ${response.statusCode}");
+        print("Failed to fetch address from API: ${data['status']}");
         setState(() {
           _status = 'Failed to fetch address';
         });
       }
-    } catch (e, stackTrace) {
-      print("Error fetching location: $e");
-      print("Stack trace: $stackTrace");
+    } else {
+      print("Failed to fetch address from API: ${response.statusCode}");
       setState(() {
-        _status = 'Error: $e';
+        _status = 'Failed to fetch address';
       });
-      _showPermissionDialog('Failed to fetch location. Please try again.');
     }
+  } catch (e, stackTrace) {
+    print("Error fetching location: $e");
+    print("Stack trace: $stackTrace");
+    setState(() {
+      _status = 'Error: $e';
+    });
+    _showPermissionDialog('Failed to fetch location. Please try again.');
   }
+}
 
   void _showPermissionDialog(String message, {bool openSettings = false}) {
     showDialog(

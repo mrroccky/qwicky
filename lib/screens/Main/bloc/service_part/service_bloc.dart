@@ -24,18 +24,29 @@ class ServiceBloc extends Bloc<ServiceEvent, ServiceState> {
       if (response.statusCode == 200) {
         // Parse the JSON response
         final List<dynamic> jsonData = jsonDecode(response.body);
-        final services = jsonData.map((json) => ServiceModel(
-          serviceId: json['service_id'] as int,
-          title: json['service_title'] as String,
-          description: (json['description'] as List<dynamic>).join('\n'),
-          image: json['service_image'] as String,
-          serviceType: json['service_type'] as String,
-          serviceDuration: json['service_duration'] as String,
-          price: double.parse(json['service_price'] as String),
-          isActive: (json['is_active'] as int) == 1,
-          createdAt: DateTime.parse(json['created_at'] as String),
-          categoryId: json['category_id'] as String,
-        )).toList();
+        final services = jsonData.map((json) {
+          // Parse the description field which is a JSON string containing an array
+          List<dynamic> descriptionList = [];
+          try {
+            descriptionList = jsonDecode(json['description'] as String);
+          } catch (e) {
+            // If parsing fails, treat as single string
+            descriptionList = [json['description'] as String];
+          }
+          
+          return ServiceModel(
+            serviceId: json['service_id'] as int,
+            title: json['service_title'] as String,
+            description: descriptionList.join('\n'),
+            image: json['service_image'] as String,
+            serviceType: json['service_type'] as String,
+            serviceDuration: json['service_duration'] as String,
+            price: double.parse(json['service_price'] as String),
+            isActive: (json['is_active'] as int) == 1,
+            createdAt: DateTime.parse(json['created_at'] as String),
+            categoryId: json['category_id'] as String,
+          );
+        }).toList();
 
         print('ServiceBloc: Emitting ServiceLoaded with ${services.length} services');
         emit(ServiceLoaded(services));

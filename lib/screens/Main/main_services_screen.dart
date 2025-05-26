@@ -25,6 +25,20 @@ class _MainServicesScreenState extends State<MainServicesScreen> {
     context.read<ServiceBloc>().add(LoadServices());
   }
 
+  // Helper method to get category ID based on service type
+  String getCategoryId(String serviceType) {
+    switch (serviceType) {
+      case 'Domestic':
+        return '1';
+      case 'Commercial':
+        return '2';
+      case 'Corporate':
+        return '3';
+      default:
+        return '1'; // Default to Domestic
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Determine title based on serviceType
@@ -68,9 +82,10 @@ class _MainServicesScreenState extends State<MainServicesScreen> {
                 if (state is ServiceLoading) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (state is ServiceLoaded) {
-                  // Filter services by serviceType
+                  // Filter services by category_id instead of serviceType
+                  final targetCategoryId = getCategoryId(widget.serviceType);
                   final filteredServices = state.services
-                      .where((service) => service.serviceType == widget.serviceType)
+                      .where((service) => service.categoryId == targetCategoryId)
                       .toList();
                   if (filteredServices.isEmpty) {
                     return const Center(child: Text('No services available for this category'));

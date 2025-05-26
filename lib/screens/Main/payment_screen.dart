@@ -39,24 +39,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<int?> _getProfessionalId(int serviceId) async {
-    try {
-      final apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000';
-      final response = await http.get(
-        Uri.parse('$apiUrl/professionals/service/$serviceId'),
-        headers: {'Content-Type': 'application/json'},
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['professional_id'];
-      } else {
-        print('Failed to fetch professional_id: ${response.statusCode} - ${response.body}');
-        return null;
-      }
-    } catch (e) {
-      print('Error fetching professional_id: $e');
+  try {
+    final apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000';
+    final response = await http.get(
+      Uri.parse('$apiUrl/professionals/service/$serviceId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['professional_id'];
+    } else if (response.statusCode == 404) {
+      print('No professional found for service ID: $serviceId');
+      return null;
+    } else {
+      print('Failed to fetch professional_id: ${response.statusCode} - ${response.body}');
       return null;
     }
+  } catch (e) {
+    print('Error fetching professional_id: $e');
+    return null;
   }
+}
 
   Future<void> _clearCart(int userId) async {
     try {

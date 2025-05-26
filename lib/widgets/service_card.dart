@@ -8,11 +8,25 @@ class ServiceCard extends StatelessWidget {
 
   const ServiceCard({super.key, required this.service});
 
+  // Helper method to clean and parse description points
+  List<String> getCleanDescriptionPoints() {
+    // Split by various newline patterns and clean each point
+    List<String> points = service.description
+        .split(RegExp(r'\\\\n|\\n|\n'))
+        .map((point) => point.trim())
+        .where((point) => point.isNotEmpty)
+        .toList();
+    
+    return points;
+  }
+
   @override
   Widget build(BuildContext context) {
     final appColor = Theme.of(context).primaryColor;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final cleanPoints = getCleanDescriptionPoints();
+    
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -56,7 +70,7 @@ class ServiceCard extends StatelessWidget {
                     Wrap(
                       spacing: 12.0, // Horizontal gap between points
                       runSpacing: 4.0, // Vertical gap between lines
-                      children: service.descriptionPoints.map((point) {
+                      children: cleanPoints.map((point) {
                         return Row(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
