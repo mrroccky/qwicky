@@ -93,36 +93,51 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   }
 
   Future<ServiceModel?> _fetchServiceById(int serviceId) async {
-    try {
-      final String apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
-      final response = await http.get(
-        Uri.parse('$apiUrl/services/$serviceId'),
-        headers: {'Content-Type': 'application/json'},
-      );
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        print('Fetched service data: $jsonData');
-        return ServiceModel(
-          serviceId: jsonData['service_id'] as int,
-          title: jsonData['service_title'],
-          description: (jsonData['description'] as List<dynamic>).join('\n'),
-          image: jsonData['service_image'],
-          serviceType: jsonData['service_type'],
-          serviceDuration: jsonData['service_duration'],
-          price: double.parse(jsonData['service_price'].toString()),
-          isActive: (jsonData['is_active'] as int) == 1,
-          createdAt: DateTime.parse(jsonData['created_at']),
-          categoryId: jsonData['category_id'],
-        );
+  try {
+    final String apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
+    final response = await http.get(
+      Uri.parse('$apiUrl/services/$serviceId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+      print('Fetched service data: $jsonData');
+
+      // Handle description field: check if it's a string or list
+      String description;
+      if (jsonData['description'] is String) {
+        // Decode the JSON-encoded string into a List and join
+        final List<dynamic> descriptionList = jsonDecode(jsonData['description']);
+        description = descriptionList.join('\n');
+      } else if (jsonData['description'] is List<dynamic>) {
+        // If it's already a List, join directly
+        description = (jsonData['description'] as List<dynamic>).join('\n');
+      } else {
+        // Fallback in case description is neither
+        description = jsonData['description']?.toString() ?? '';
       }
-      print('Failed to fetch service $serviceId: ${response.statusCode}');
-      return null;
-    } catch (e, stackTrace) {
-      print('Error fetching service $serviceId: $e');
-      print('Stack trace: $stackTrace');
-      return null;
+
+      return ServiceModel(
+        serviceId: jsonData['service_id'] as int,
+        title: jsonData['service_title'],
+        description: description,
+        image: jsonData['service_image'],
+        serviceType: jsonData['service_type'],
+        serviceDuration: jsonData['service_duration'],
+        price: double.parse(jsonData['service_price'].toString()),
+        isActive: (jsonData['is_active'] as int) == 1,
+        createdAt: DateTime.parse(jsonData['created_at']),
+        categoryId: jsonData['category_id'],
+      );
     }
+    print('Failed to fetch service $serviceId: ${response.statusCode}');
+    return null;
+  } catch (e, stackTrace) {
+    print('Error fetching service $serviceId: $e');
+    print('Stack trace: $stackTrace');
+    return null;
   }
+}
 
   Future<void> _requestLocationPermission() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
