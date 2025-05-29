@@ -6,12 +6,14 @@ import 'package:qwicky/widgets/service_card.dart';
 
 class MainServicesScreen extends StatefulWidget {
   final String address;
-  final String serviceType; 
+  final String serviceType;
+  final String city; // Add city parameter
 
   const MainServicesScreen({
     super.key,
     required this.address,
     required this.serviceType,
+    required this.city, // Require city
   });
 
   @override
@@ -41,7 +43,6 @@ class _MainServicesScreenState extends State<MainServicesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine title based on serviceType
     String title;
     switch (widget.serviceType) {
       case 'Domestic':
@@ -82,13 +83,24 @@ class _MainServicesScreenState extends State<MainServicesScreen> {
                 if (state is ServiceLoading) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (state is ServiceLoaded) {
-                  // Filter services by category_id instead of serviceType
+                  // Filter services by category_id
                   final targetCategoryId = getCategoryId(widget.serviceType);
-                  final filteredServices = state.services
+                  var filteredServices = state.services
                       .where((service) => service.categoryId == targetCategoryId)
                       .toList();
+
+                  // Further filter by location
+                  filteredServices = filteredServices.where((service) {
+                    // If service location is null or empty, show the service
+                    if (service.location == null || service.location!.isEmpty) {
+                      return true;
+                    }
+                    // Otherwise, only show if the service's location matches the user's city
+                    return service.location!.toLowerCase() == widget.city.toLowerCase();
+                  }).toList();
+
                   if (filteredServices.isEmpty) {
-                    return const Center(child: Text('No services available for this category'));
+                    return const Center(child: Text('No services available for this category or location'));
                   }
                   return ListView.builder(
                     padding: const EdgeInsets.all(16),

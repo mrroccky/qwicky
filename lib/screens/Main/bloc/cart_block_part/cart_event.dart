@@ -9,20 +9,22 @@ abstract class CartEvent extends Equatable {
 
 class AddServiceToCart extends CartEvent {
   final ServiceModel service;
+  final String userId; // Add userId
 
-  const AddServiceToCart(this.service);
+  const AddServiceToCart(this.service, this.userId);
 
   @override
-  List<Object> get props => [service];
+  List<Object> get props => [service, userId];
 }
 
 class RemoveServiceFromCart extends CartEvent {
   final String uniqueKey;
+  final String userId; // Add userId
 
-  const RemoveServiceFromCart(this.uniqueKey);
+  const RemoveServiceFromCart(this.uniqueKey, this.userId);
 
   @override
-  List<Object> get props => [uniqueKey];
+  List<Object> get props => [uniqueKey, userId];
 }
 
 class LoadCartFromBackend extends CartEvent {

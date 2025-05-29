@@ -8,6 +8,7 @@ class ServiceModel{
   final bool? isActive;
   final DateTime? createdAt;
   final String? categoryId;
+  final String? location;
   final String image; // Added for UI display
 
   ServiceModel({
@@ -21,6 +22,7 @@ class ServiceModel{
     this.createdAt,
     this.categoryId,
     required this.image,
+    this.location,s
   });
 
   // Helper to split description into bullet points

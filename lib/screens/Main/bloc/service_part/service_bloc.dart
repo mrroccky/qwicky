@@ -17,23 +17,19 @@ class ServiceBloc extends Bloc<ServiceEvent, ServiceState> {
     print('ServiceBloc: Loading services...');
     emit(ServiceLoading());
     try {
-      // Get the API URL from .env
       final String apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
       final response = await http.get(Uri.parse('$apiUrl/services'));
 
       if (response.statusCode == 200) {
-        // Parse the JSON response
         final List<dynamic> jsonData = jsonDecode(response.body);
         final services = jsonData.map((json) {
-          // Parse the description field which is a JSON string containing an array
           List<dynamic> descriptionList = [];
           try {
             descriptionList = jsonDecode(json['description'] as String);
           } catch (e) {
-            // If parsing fails, treat as single string
             descriptionList = [json['description'] as String];
           }
-          
+
           return ServiceModel(
             serviceId: json['service_id'] as int,
             title: json['service_title'] as String,
@@ -41,10 +37,11 @@ class ServiceBloc extends Bloc<ServiceEvent, ServiceState> {
             image: json['service_image'] as String,
             serviceType: json['service_type'] as String,
             serviceDuration: json['service_duration'] as String,
-            price: double.parse(json['service_price'] as String),
+            price: double.parse(json['service_price'].toString()),
             isActive: (json['is_active'] as int) == 1,
             createdAt: DateTime.parse(json['created_at'] as String),
             categoryId: json['category_id'] as String,
+            location: json['location'] as String?, // Parse location field
           );
         }).toList();
 

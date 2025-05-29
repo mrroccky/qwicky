@@ -8,12 +8,14 @@ class HomeContentPart extends StatefulWidget {
   final String address;
   final double screenWidth;
   final double screenHeight;
+  final String city;
 
   const HomeContentPart({
     super.key,
     required this.address,
     required this.screenWidth,
     required this.screenHeight,
+    required this.city,
   });
 
   @override
@@ -53,6 +55,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
                     serviceType: 'Domestic',
+                    city: widget.city,
                   ),
                 ),
               ),
@@ -67,6 +70,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
                     serviceType: 'Domestic',
+                    city: widget.city,
                   ),
                 ),
               ),
@@ -81,6 +85,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
                     serviceType: 'Domestic',
+                    city: widget.city,
                   ),
                 ),
               ),
@@ -102,6 +107,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
                     serviceType: 'Domestic',
+                    city: widget.city,
                   ),
                 ),
               ),
@@ -116,6 +122,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
                     serviceType: 'Domestic',
+                    city: widget.city,
                   ),
                 ),
               ),
@@ -124,7 +131,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
           ],
         ),
         SizedBox(height: 20),
-        CarouselSliderMain(address: widget.address),
+        CarouselSliderMain(address: widget.address, city: widget.city,),
         SizedBox(height: widget.screenHeight * 0.02),
         // Services We Offer Section
         Padding(
@@ -153,6 +160,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
                     serviceType: 'Domestic',
+                    city: widget.city,
                   ),
                 ),
               ),
@@ -167,6 +175,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
                     serviceType: 'Commercial',
+                    city: widget.city,
                   ),
                 ),
               ),
@@ -186,6 +195,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
               builder: (context) => MainServicesScreen(
                 address: widget.address,
                 serviceType: 'Corporate',
+                city: widget.city,
               ),
             ),
           ),
@@ -220,6 +230,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
                       serviceType: 'Domestic',
+                      city: widget.city,
                     ),
                   ),
                 ),
@@ -235,6 +246,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
                       serviceType: 'Domestic',
+                      city: widget.city,
                     ),
                   ),
                 ),
@@ -250,6 +262,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
                       serviceType: 'Domestic',
+                      city: widget.city,
                     ),
                   ),
                 ),
@@ -264,6 +277,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
+                      city: widget.city,
                       serviceType: 'Domestic',
                     ),
                   ),

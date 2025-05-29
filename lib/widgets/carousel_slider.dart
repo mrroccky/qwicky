@@ -5,8 +5,8 @@ import 'package:qwicky/widgets/colors.dart';
 
 class CarouselSliderMain extends StatefulWidget {
   final String address;
-
-  const CarouselSliderMain({super.key, required this.address});
+  final String city;
+  const CarouselSliderMain({super.key, required this.address, required this.city});
 
   @override
   State<CarouselSliderMain> createState() => _CarouselSliderMainState();
@@ -67,6 +67,7 @@ class _CarouselSliderMainState extends State<CarouselSliderMain> {
                         builder: (context) => MainServicesScreen(
                           address: widget.address,
                           serviceType: item['serviceType'],
+                          city: widget.city,
                         ),
                       ),
                     );

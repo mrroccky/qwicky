@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:lottie/lottie.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:qwicky/widgets/comment_dialog.dart';
 import 'package:qwicky/widgets/rating_widget.dart';
 
 class BookedService {
@@ -138,7 +139,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header
                           Padding(
                             padding: EdgeInsets.only(
                               left: screenHeight * 0.03,
@@ -164,7 +164,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               ],
                             ),
                           ),
-                          // Booked Services
                           ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
@@ -200,7 +199,6 @@ class _HistoryCardState extends State<HistoryCard> {
   bool _serviceRated = false;
   bool _professionalRated = false;
 
-  // Handle rating submission
   void _onRatingSubmitted(String targetType, String reviewId, int rating) {
     setState(() {
       if (targetType == 'service') {
@@ -214,7 +212,6 @@ class _HistoryCardState extends State<HistoryCard> {
       }
     });
 
-    // Show comment dialog if both ratings are submitted
     if (_serviceRated && _professionalRated &&
         _serviceReviewId != null && _professionalReviewId != null) {
       showDialog(
@@ -246,7 +243,6 @@ class _HistoryCardState extends State<HistoryCard> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Left: Image
                 ClipRRect(
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(10),
@@ -264,7 +260,6 @@ class _HistoryCardState extends State<HistoryCard> {
                         ),
                   ),
                 ),
-                // Right: Content
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -272,7 +267,6 @@ class _HistoryCardState extends State<HistoryCard> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        // Title
                         Text(
                           widget.service.title,
                           style: TextStyle(
@@ -281,7 +275,6 @@ class _HistoryCardState extends State<HistoryCard> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Quantity
                         Text(
                           '${widget.service.quantity} ${widget.service.quantity == 1 ? 'service' : 'services'}',
                           style: TextStyle(
@@ -290,7 +283,6 @@ class _HistoryCardState extends State<HistoryCard> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Booked On
                         Text(
                           'Booked on: ${DateFormat('yyyy-MM-dd').format(widget.service.bookedOn)}',
                           style: TextStyle(
@@ -300,7 +292,6 @@ class _HistoryCardState extends State<HistoryCard> {
                         ),
                         if (isCompleted) ...[
                           const SizedBox(height: 12),
-                          // Rating Section - Full Width
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -312,8 +303,8 @@ class _HistoryCardState extends State<HistoryCard> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              // Service Rating
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Text(
                                     'Service:',
@@ -322,6 +313,7 @@ class _HistoryCardState extends State<HistoryCard> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: RatingWidget(
+                                      professionalId: widget.service.professionalId,
                                       bookingId: widget.service.bookingId,
                                       userId: widget.userId,
                                       targetId: widget.service.serviceId,
@@ -335,8 +327,8 @@ class _HistoryCardState extends State<HistoryCard> {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              // Professional Rating
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Text(
                                     'Professional:',
@@ -345,6 +337,7 @@ class _HistoryCardState extends State<HistoryCard> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: RatingWidget(
+                                      professionalId: widget.service.professionalId,
                                       bookingId: widget.service.bookingId,
                                       userId: widget.userId,
                                       targetId: widget.service.professionalId,
@@ -366,7 +359,6 @@ class _HistoryCardState extends State<HistoryCard> {
                 ),
               ],
             ),
-            // Status Badge
             Positioned(
               top: 8,
               right: 8,
@@ -393,140 +385,6 @@ class _HistoryCardState extends State<HistoryCard> {
   }
 }
 
-// Dialog for adding comments
-class CommentDialog extends StatefulWidget {
-  final String serviceReviewId;
-  final String professionalReviewId;
-  final int serviceRating;
-  final int professionalRating;
-
-  const CommentDialog({
-    super.key,
-    required this.serviceReviewId,
-    required this.professionalReviewId,
-    required this.serviceRating,
-    required this.professionalRating,
-  });
-
-  @override
-  State<CommentDialog> createState() => _CommentDialogState();
-}
-
-class _CommentDialogState extends State<CommentDialog> {
-  final TextEditingController _commentController = TextEditingController();
-  bool isSubmitting = false;
-
-  Future<void> _submitComment() async {
-    if (_commentController.text.isEmpty) return;
-
-    setState(() {
-      isSubmitting = true;
-    });
-
-    try {
-      final String apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
-
-      // Update service review
-      final serviceResponse = await http.put(
-        Uri.parse('$apiUrl/servicereview/${widget.serviceReviewId}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'rating': widget.serviceRating,
-          'comment': _commentController.text,
-        }),
-      );
-      print('Service comment update status: ${serviceResponse.statusCode}');
-      print('Service comment update body: ${serviceResponse.body}');
-
-      // Update professional review
-      final professionalResponse = await http.put(
-        Uri.parse('$apiUrl/user-review-prof/${widget.professionalReviewId}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'rating': widget.professionalRating,
-          'review_text': _commentController.text,
-        }),
-      );
-      print('Professional comment update status: ${professionalResponse.statusCode}');
-      print('Professional comment update body: ${professionalResponse.body}');
-
-      if (serviceResponse.statusCode == 200 && professionalResponse.statusCode == 200 && mounted) {
-        Navigator.of(context).pop();
-      } else {
-        throw Exception('Failed to update comments');
-      }
-    } catch (e) {
-      print('Error submitting comment: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to submit comment')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          isSubmitting = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        constraints: BoxConstraints(maxWidth: 400, maxHeight: screenHeight * 0.4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Add Your Comment',
-              style: TextStyle(
-                fontSize: screenHeight * 0.025,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _commentController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Comment',
-                hintText: 'Enter your comment here',
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-                ),
-                ElevatedButton(
-                  onPressed: isSubmitting ? null : _submitComment,
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Submit'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Extension to capitalize the status string
 extension StringExtension on String {
   String capitalize() {
     if (isEmpty) return this;

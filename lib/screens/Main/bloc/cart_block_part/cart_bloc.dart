@@ -5,7 +5,6 @@ import 'package:qwicky/models/service_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:qwicky/widgets/cart_item.dart';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 
 part 'cart_event.dart';
 part 'cart_state.dart';
@@ -21,30 +20,27 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     final currentState = state;
     final uniqueKey = '${event.service.serviceId}_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Check if serviceId is non-null
     if (event.service.serviceId == null) {
       print('CartBloc: Error - Service ID is null for service: ${event.service.title}');
       emit(const CartError('Cannot add service to cart: Service ID is missing'));
       return;
     }
 
-    // Update service_items_id in backend
     List<int>? updatedServiceItemsId;
     try {
-      updatedServiceItemsId = await _updateServiceItemsId(event.service.serviceId!, add: true);
+      updatedServiceItemsId = await _updateServiceItemsId(event.service.serviceId!, userId: event.userId, add: true);
       print('CartBloc: Updated service_items_id after add: $updatedServiceItemsId');
     } catch (e, stackTrace) {
       print('CartBloc: Error updating service_items_id on add: $e');
       print('Stack trace: $stackTrace');
-      emit(CartError('Failed to update cart in database: $e'));
-      return; // Stop cart update to keep UI consistent with database
+      emit(CartError('Failed to add item to cart: $e. Please try logging in again.'));
+      return;
     }
 
     if (currentState is CartLoaded) {
       final updatedItems = List<MapEntry<String, CartItem>>.from(currentState.items);
       final existingIndex = updatedItems.indexWhere((item) => item.value.service.serviceId == event.service.serviceId);
       if (existingIndex != -1) {
-        // Increment quantity for existing service
         final existingItem = updatedItems[existingIndex];
         updatedItems[existingIndex] = MapEntry(
           existingItem.key,
@@ -55,7 +51,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         );
         print('CartBloc: Incremented quantity for service ID ${event.service.serviceId} (quantity: ${updatedItems[existingIndex].value.quantity})');
       } else {
-        // Add new service
         updatedItems.add(MapEntry(uniqueKey, CartItem(service: event.service, quantity: 1)));
         print('CartBloc: Added service ID ${event.service.serviceId} to cart (unique key: $uniqueKey, quantity: 1)');
       }
@@ -82,20 +77,18 @@ class CartBloc extends Bloc<CartEvent, CartState> {
           return;
         }
 
-        // Update service_items_id in backend
         List<int>? updatedServiceItemsId;
         try {
-          updatedServiceItemsId = await _updateServiceItemsId(serviceId, add: false);
+          updatedServiceItemsId = await _updateServiceItemsId(serviceId, userId: event.userId, add: false);
           print('CartBloc: Updated service_items_id after remove: $updatedServiceItemsId');
         } catch (e, stackTrace) {
           print('CartBloc: Error updating service_items_id on remove: $e');
           print('Stack trace: $stackTrace');
-          emit(CartError('Failed to update cart in database: $e'));
-          return; // Stop cart update to keep UI consistent with database
+          emit(CartError('Failed to remove item from cart: $e. Please try logging in again.'));
+          return;
         }
 
         if (cartItem.quantity > 1) {
-          // Decrease quantity
           updatedItems[index] = MapEntry(
             updatedItems[index].key,
             CartItem(
@@ -105,7 +98,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
           );
           print('CartBloc: Decreased quantity for service ID $serviceId (quantity: ${updatedItems[index].value.quantity})');
         } else {
-          // Remove item
           updatedItems.removeAt(index);
           print('CartBloc: Removed service ID $serviceId from cart (unique key: ${event.uniqueKey})');
         }
@@ -117,7 +109,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
   Future<void> _onLoadCartFromBackend(LoadCartFromBackend event, Emitter<CartState> emit) async {
     final services = event.services;
-    // Group services by serviceId and count quantities
     final Map<int, int> serviceQuantities = {};
     for (var service in services) {
       if (service.serviceId != null) {
@@ -135,19 +126,17 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     emit(CartLoaded(cartItems));
   }
 
-  Future<List<int>> _updateServiceItemsId(int serviceId, {required bool add}) async {
+  Future<List<int>> _updateServiceItemsId(int serviceId, {required String userId, required bool add}) async {
     String baseUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('userId');
 
-    if (userId == null || userId.isEmpty) {
-      throw Exception('User ID not found in SharedPreferences. Please log in again.');
+    print('CartBloc: Attempting to fetch user data with userId: $userId');
+
+    if (userId.isEmpty) {
+      throw Exception('User ID is empty. Please log in again.');
     }
 
-    // Retry logic (up to 3 attempts)
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
-        // Fetch current user data
         final response = await http.get(
           Uri.parse('$baseUrl/users/$userId'),
           headers: {'Content-Type': 'application/json'},
@@ -167,14 +156,12 @@ class CartBloc extends Bloc<CartEvent, CartState> {
           throw Exception('Failed to parse service_items_id: $e');
         }
 
-        // Update service_items_id
         if (add) {
           serviceItemsId.add(serviceId);
         } else {
-          serviceItemsId.remove(serviceId); // Remove first occurrence
+          serviceItemsId.remove(serviceId);
         }
 
-        // Send updated service_items_id to backend
         final updateResponse = await http.put(
           Uri.parse('$baseUrl/users/$userId'),
           headers: {'Content-Type': 'application/json'},
@@ -191,7 +178,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         if (attempt == 3) {
           throw Exception('Failed to update service_items_id after 3 attempts: $e');
         }
-        await Future.delayed(Duration(milliseconds: 500 * attempt)); // Exponential backoff
+        await Future.delayed(Duration(milliseconds: 500 * attempt));
       }
     }
 

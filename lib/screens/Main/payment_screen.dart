@@ -8,7 +8,6 @@ import 'package:qwicky/widgets/main_button.dart';
 import 'package:qwicky/provider/user_provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
@@ -47,12 +46,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void dispose() {
     _razorpay.clear();
     super.dispose();
-  }
-
-  Future<int?> _getUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userIdString = prefs.getString('userId');
-    return userIdString != null ? int.tryParse(userIdString) : null;
   }
 
   Future<int?> _getProfessionalId(int serviceId) async {
@@ -126,12 +119,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     };
   }
 
-  Future<void> _savePaymentToBackend(int bookingId, String transactionId, String paymentStatus) async {
-    final userId = await _getUserId();
-    if (userId == null) {
-      throw Exception('User not logged in');
-    }
-
+  Future<void> _savePaymentToBackend(int userId, int bookingId, String transactionId, String paymentStatus) async {
     final apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000';
     final payload = {
       'booking_id': bookingId, // Integer
@@ -161,7 +149,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     print('Payment Success: ${response.paymentId}');
 
-    final userId = await _getUserId();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userIdString = userProvider.userData?['user_id']?.toString();
+    final userId = userIdString != null ? int.tryParse(userIdString) : null;
+
     if (userId == null) {
       setState(() {
         isLoading = false;
@@ -243,6 +234,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           print('Booking created successfully: $bookingId');
 
           await _savePaymentToBackend(
+            userId,
             bookingId, // Integer
             response.paymentId!, // String
             'Completed',
@@ -266,10 +258,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final userAddress = addressData['address_line'].isNotEmpty
           ? addressData['address_line']
           : 'Address not available';
-
+      final userCity = addressData['city'].isNotEmpty ? addressData['city'] : 'City not available';
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (context) => HomeScreen(address: userAddress),
+          builder: (context) => HomeScreen(address: userAddress, city: userCity),
         ),
         (route) => false,
       );
@@ -296,6 +288,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       try {
         await _savePaymentToBackend(
+          userId,
           bookingsCreated.isNotEmpty ? bookingsCreated.first : 0, // Fallback to 0
           response.paymentId!,
           'Failed',
@@ -318,14 +311,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
       SnackBar(content: Text('Payment failed: $errorMessageText')),
     );
 
-    try {
-      await _savePaymentToBackend(
-        0, // Fallback booking_id for failed payment
-        'error-${response.code}', // String
-        'Failed',
-      );
-    } catch (e) {
-      print('Error saving failed payment: $e');
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userIdString = userProvider.userData?['user_id']?.toString();
+    final userId = userIdString != null ? int.tryParse(userIdString) : null;
+
+    if (userId != null) {
+      try {
+        await _savePaymentToBackend(
+          userId,
+          0, // Fallback booking_id for failed payment
+          'error-${response.code}', // String
+          'Failed',
+        );
+      } catch (e) {
+        print('Error saving failed payment: $e');
+      }
     }
   }
 
@@ -339,12 +339,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
       errorMessage = null;
     });
 
-    final userId = await _getUserId();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userIdString = userProvider.userData?['user_id']?.toString();
+    final userId = userIdString != null ? int.tryParse(userIdString) : null;
+
     if (userId == null) {
       setState(() {
         isLoading = false;
         errorMessage = 'User not logged in';
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
       return;
     }
 
@@ -360,7 +366,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
     final userData = userProvider.userData;
     final razorpayKey = dotenv.env['RAZORPAY_KEY_ID'];
     if (razorpayKey == null || razorpayKey.isEmpty) {
@@ -389,8 +394,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       'retry': {'enabled': true, 'max_count': 3},
       'timeout': 300,
     };
-
-    // print('Razorpay options: $options');
 
     try {
       _razorpay.open(options);

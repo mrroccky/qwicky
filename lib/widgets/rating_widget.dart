@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:qwicky/widgets/colors.dart';
 
 class RatingWidget extends StatefulWidget {
   final int bookingId;
   final int userId;
   final int targetId;
-  final int serviceId; // Added for professional review
-  final String targetType; // "service" or "professional"
+  final int serviceId;
+  final String targetType;
+  final int professionalId;
   final Function(String reviewId, int rating)? onRatingSubmitted;
 
   const RatingWidget({
@@ -19,6 +21,7 @@ class RatingWidget extends StatefulWidget {
     required this.serviceId,
     required this.targetType,
     this.onRatingSubmitted,
+    required this.professionalId,
   });
 
   @override
@@ -73,12 +76,134 @@ class _RatingWidgetState extends State<RatingWidget> {
     }
   }
 
-  Future<void> _submitRating(int rating) async {
+  String _getRatingMessage(int rating) {
+    switch (rating) {
+      case 5:
+        return "Thanks for the 5-star rating! 🌟 We’re thrilled you loved our service!";
+      case 4:
+        return "Thanks for the 4-star rating! 🎉 Hope you enjoyed our services!";
+      case 3:
+        return "Thanks for the 3-star rating! 😊 Let us know how we can improve.";
+      case 2:
+        return "Thanks for the 2-star rating. 😔 We’d love your feedback to make things better.";
+      case 1:
+        return "Sorry to hear about your 1-star rating. 😢 Please share your feedback so we can improve.";
+      default:
+        return "Thanks for your rating!";
+    }
+  }
+
+  void _showRatingDialog(int starValue) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) { // Use a separate context for the dialog
+        final TextEditingController commentController = TextEditingController();
+        bool isSubmitting = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom,
+                    left: 16,
+                    right: 16,
+                    top: 16,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _getRatingMessage(starValue),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: commentController,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: 'Comment (Optional)',
+                            hintText: 'Enter your feedback here',
+                          ),
+                          maxLines: 3,
+                          minLines: 1,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(),
+                              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                            ),
+                            ElevatedButton(
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () async {
+                                      setDialogState(() {
+                                        isSubmitting = true;
+                                      });
+                                      try {
+                                        await _submitRating(starValue, commentController.text);
+                                        print('Submission successful for ${widget.targetType}, closing dialog...');
+                                        if (mounted) {
+                                          Navigator.of(dialogContext).pop(); // Use dialogContext to pop
+                                        }
+                                      } catch (e) {
+                                        print('Error during submission: $e');
+                                        setDialogState(() {
+                                          isSubmitting = false;
+                                        });
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Failed to submit ${widget.targetType} rating')),
+                                          );
+                                        }
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryColor,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Text(
+                                      'Submit',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitRating(int rating, String comment) async {
     if (_isLoading) return;
 
     setState(() {
       _isLoading = true;
-      _currentRating = rating; // Optimistic UI update
+      _currentRating = rating;
     });
 
     try {
@@ -90,9 +215,10 @@ class _RatingWidgetState extends State<RatingWidget> {
         body = {
           'service_id': widget.targetId,
           'user_id': widget.userId,
-          'professional_id': widget.targetId == widget.serviceId ? widget.targetId : widget.serviceId, // Use serviceId as professional_id if needed
+          'professional_id': widget.professionalId,
+          'booking_id': widget.bookingId,
           'rating': rating,
-          'comment': '',
+          'comment': comment,
         };
       } else {
         body = {
@@ -101,7 +227,7 @@ class _RatingWidgetState extends State<RatingWidget> {
           'professional_id': widget.targetId,
           'booking_id': widget.bookingId,
           'rating': rating,
-          'review_text': '',
+          'review_text': comment,
         };
       }
 
@@ -110,14 +236,13 @@ class _RatingWidgetState extends State<RatingWidget> {
       http.Response response;
 
       if (_reviewId == null) {
-        // Create new review
         response = await http.post(
           Uri.parse('$apiUrl/$endpoint'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(body),
         );
-        print('POST response status: ${response.statusCode}');
-        print('POST response body: ${response.body}');
+        print('POST response status for ${widget.targetType}: ${response.statusCode}');
+        print('POST response body for ${widget.targetType}: ${response.body}');
 
         if (response.statusCode == 201) {
           final data = jsonDecode(response.body);
@@ -133,17 +258,16 @@ class _RatingWidgetState extends State<RatingWidget> {
           throw Exception('Failed to create review: ${response.statusCode} - ${response.body}');
         }
       } else {
-        // Update existing review
         final updateBody = widget.targetType == 'service'
-            ? {'rating': rating, 'comment': ''}
-            : {'rating': rating, 'review_text': ''};
+            ? {'rating': rating, 'comment': comment}
+            : {'rating': rating, 'review_text': comment};
         response = await http.put(
           Uri.parse('$apiUrl/$endpoint/$_reviewId'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(updateBody),
         );
-        print('PUT response status: ${response.statusCode}');
-        print('PUT response body: ${response.body}');
+        print('PUT response status for ${widget.targetType}: ${response.statusCode}');
+        print('PUT response body for ${widget.targetType}: ${response.body}');
 
         if (response.statusCode == 200 && mounted) {
           widget.onRatingSubmitted?.call(_reviewId!, rating);
@@ -159,9 +283,10 @@ class _RatingWidgetState extends State<RatingWidget> {
           SnackBar(content: Text('Failed to submit ${widget.targetType} rating')),
         );
         setState(() {
-          _currentRating = null; // Revert to no rating
+          _currentRating = null;
         });
       }
+      rethrow;
     } finally {
       if (mounted) {
         setState(() {
@@ -172,20 +297,22 @@ class _RatingWidgetState extends State<RatingWidget> {
   }
 
   @override
-  Widget build(context) {
+  Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(5, (index) {
         final starValue = index + 1;
-        return GestureDetector(
-          onTap: _isLoading ? null : () => _submitRating(starValue),
-          child: Opacity(
-            opacity: _isLoading ? 0.6 : 1.0,
-            child: Icon(
-              _currentRating != null && starValue <= _currentRating! ? Icons.star : Icons.star_border,
-              color: _currentRating != null && starValue <= _currentRating! ? Colors.green : Colors.grey,
-              size: screenHeight * 0.03,
+        return Expanded(
+          child: GestureDetector(
+            onTap: _isLoading ? null : () => _showRatingDialog(starValue),
+            child: Opacity(
+              opacity: _isLoading ? 0.6 : 1.0,
+              child: Icon(
+                _currentRating != null && starValue <= _currentRating! ? Icons.star : Icons.star_border,
+                color: _currentRating != null && starValue <= _currentRating! ? Colors.green : Colors.grey,
+                size: screenHeight * 0.03,
+              ),
             ),
           ),
         );

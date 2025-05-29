@@ -93,51 +93,49 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   }
 
   Future<ServiceModel?> _fetchServiceById(int serviceId) async {
-  try {
-    final String apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
-    final response = await http.get(
-      Uri.parse('$apiUrl/services/$serviceId'),
-      headers: {'Content-Type': 'application/json'},
-    );
-    if (response.statusCode == 200) {
-      final jsonData = jsonDecode(response.body);
-      print('Fetched service data: $jsonData');
-
-      // Handle description field: check if it's a string or list
-      String description;
-      if (jsonData['description'] is String) {
-        // Decode the JSON-encoded string into a List and join
-        final List<dynamic> descriptionList = jsonDecode(jsonData['description']);
-        description = descriptionList.join('\n');
-      } else if (jsonData['description'] is List<dynamic>) {
-        // If it's already a List, join directly
-        description = (jsonData['description'] as List<dynamic>).join('\n');
-      } else {
-        // Fallback in case description is neither
-        description = jsonData['description']?.toString() ?? '';
-      }
-
-      return ServiceModel(
-        serviceId: jsonData['service_id'] as int,
-        title: jsonData['service_title'],
-        description: description,
-        image: jsonData['service_image'],
-        serviceType: jsonData['service_type'],
-        serviceDuration: jsonData['service_duration'],
-        price: double.parse(jsonData['service_price'].toString()),
-        isActive: (jsonData['is_active'] as int) == 1,
-        createdAt: DateTime.parse(jsonData['created_at']),
-        categoryId: jsonData['category_id'],
+    try {
+      final String apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
+      final response = await http.get(
+        Uri.parse('$apiUrl/services/$serviceId'),
+        headers: {'Content-Type': 'application/json'},
       );
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        print('Fetched service data: $jsonData');
+
+        // Handle description field: check if it's a string or list
+        String description;
+        if (jsonData['description'] is String) {
+          final List<dynamic> descriptionList = jsonDecode(jsonData['description']);
+          description = descriptionList.join('\n');
+        } else if (jsonData['description'] is List<dynamic>) {
+          description = (jsonData['description'] as List<dynamic>).join('\n');
+        } else {
+          description = jsonData['description']?.toString() ?? '';
+        }
+
+        return ServiceModel(
+          serviceId: jsonData['service_id'] as int,
+          title: jsonData['service_title'],
+          description: description,
+          image: jsonData['service_image'],
+          serviceType: jsonData['service_type'],
+          serviceDuration: jsonData['service_duration'],
+          price: double.parse(jsonData['service_price'].toString()),
+          isActive: (jsonData['is_active'] as int) == 1,
+          createdAt: DateTime.parse(jsonData['created_at']),
+          categoryId: jsonData['category_id'],
+          location: jsonData['location'] as String?, // Parse location
+        );
+      }
+      print('Failed to fetch service $serviceId: ${response.statusCode}');
+      return null;
+    } catch (e, stackTrace) {
+      print('Error fetching service $serviceId: $e');
+      print('Stack trace: $stackTrace');
+      return null;
     }
-    print('Failed to fetch service $serviceId: ${response.statusCode}');
-    return null;
-  } catch (e, stackTrace) {
-    print('Error fetching service $serviceId: $e');
-    print('Stack trace: $stackTrace');
-    return null;
   }
-}
 
   Future<void> _requestLocationPermission() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -203,73 +201,92 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   }
 
   Future<void> _fetchLocation() async {
-  try {
-    print("Calling Geolocator.getCurrentPosition...");
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-    print("Position received: ${position.latitude}, ${position.longitude}");
+    try {
+      print("Calling Geolocator.getCurrentPosition...");
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      print("Position received: ${position.latitude}, ${position.longitude}");
 
-    double lat = position.latitude;
-    double lon = position.longitude;
+      double lat = position.latitude;
+      double lon = position.longitude;
 
-    final url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lon&key=$_locationIqApiKey';
+      final url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lon&key=$_locationIqApiKey';
 
-    final response = await http.get(Uri.parse(url));
-    print("Response body: ${response.body}");
+      final response = await http.get(Uri.parse(url));
+      print("Response body: ${response.body}");
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['status'] == 'OK' && data['results'] != null && data['results'].isNotEmpty) {
-        // Use formatted_address for a complete, human-readable address
-        String address = data['results'][0]['formatted_address'] ?? 'Unknown address';
-        print("Fetched address: $address");
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'OK' && data['results'] != null && data['results'].isNotEmpty) {
+          String address = data['results'][0]['formatted_address'] ?? 'Unknown address';
+          print("Fetched address: $address");
 
-        setState(() {
-          _address = address;
-          _status = address;
-        });
+          // Extract city name from address_components
+          String? cityName;
+          final addressComponents = data['results'][0]['address_components'] as List<dynamic>;
+          for (var component in addressComponents) {
+            final types = component['types'] as List<dynamic>;
+            if (types.contains('locality')) {
+              cityName = component['long_name'] as String;
+              break;
+            } else if (types.contains('administrative_area_level_2') && cityName == null) {
+              cityName = component['long_name'] as String;
+            } else if (types.contains('administrative_area_level_1') && cityName == null) {
+              cityName = component['long_name'] as String;
+            }
+          }
+          cityName ??= 'Unknown';
+          print("Extracted city name: $cityName");
 
-        await Future.delayed(const Duration(seconds: 1));
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(address: address),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(1.0, 0.0);
-                const end = Offset.zero;
-                const curve = Curves.easeInOut;
-                var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                return SlideTransition(
-                  position: animation.drive(tween),
-                  child: child,
-                );
-              },
-              transitionDuration: const Duration(milliseconds: 300),
-            ),
-          );
+          setState(() {
+            _address = address;
+            _status = address;
+          });
+
+          await Future.delayed(const Duration(seconds: 1));
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(
+                  address: address,
+                  city: cityName ?? 'Unknown',
+                ),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(1.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.easeInOut;
+                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  return SlideTransition(
+                    position: animation.drive(tween),
+                    child: child,
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 300),
+              ),
+            );
+          }
+        } else {
+          print("Failed to fetch address from API: ${data['status']}");
+          setState(() {
+            _status = 'Failed to fetch address';
+          });
         }
       } else {
-        print("Failed to fetch address from API: ${data['status']}");
+        print("Failed to fetch address from API: ${response.statusCode}");
         setState(() {
           _status = 'Failed to fetch address';
         });
       }
-    } else {
-      print("Failed to fetch address from API: ${response.statusCode}");
+    } catch (e, stackTrace) {
+      print("Error fetching location: $e");
+      print("Stack trace: $stackTrace");
       setState(() {
-        _status = 'Failed to fetch address';
+        _status = 'Error: $e';
       });
+      _showPermissionDialog('Failed to fetch location. Please try again.');
     }
-  } catch (e, stackTrace) {
-    print("Error fetching location: $e");
-    print("Stack trace: $stackTrace");
-    setState(() {
-      _status = 'Error: $e';
-    });
-    _showPermissionDialog('Failed to fetch location. Please try again.');
   }
-}
 
   void _showPermissionDialog(String message, {bool openSettings = false}) {
     showDialog(

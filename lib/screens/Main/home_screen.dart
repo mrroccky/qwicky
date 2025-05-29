@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:qwicky/provider/user_provider.dart';
 import 'package:qwicky/screens/Main/history_screen.dart';
 import 'package:qwicky/screens/Main/main_services_screen.dart';
 import 'package:qwicky/screens/Main/profile_screen.dart';
@@ -7,11 +9,11 @@ import 'package:qwicky/widgets/colors.dart';
 import 'package:qwicky/widgets/home_content_part.dart';
 import 'package:qwicky/widgets/nav_bar.dart';
 import 'package:qwicky/widgets/service_item.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   final String address;
-  const HomeScreen({super.key, required this.address});
+  final String city;
+  const HomeScreen({super.key, required this.address, required this.city});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,23 +22,33 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   int? _userId;
+
   @override
   void initState() {
     super.initState();
-    _loadUserId(); 
+    _loadUserId();
   }
 
-  // Fetch userId from SharedPreferences
+  // Fetch userId from UserProvider
   Future<void> _loadUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userIdString = prefs.getString('userId');
-    if (userIdString != null) {
-      setState(() {
-        _userId = int.tryParse(userIdString); // Convert string to int
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userIdString = userProvider.userData?['user_id']?.toString();
+    final userId = userIdString != null ? int.tryParse(userIdString) : null;
+
+    setState(() {
+      _userId = userId;
+    });
+
+    print('Loaded userId from UserProvider: $_userId');
+
+    if (_userId == null) {
+      print('No userId found in UserProvider, redirecting to login');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User ID not found. Please log in again.')),
+        );
+        Navigator.of(context).pushReplacementNamed('/login');
       });
-      print('Loaded userId from SharedPreferences: $_userId');
-    } else {
-      print('No userId found in SharedPreferences');
     }
   }
 
@@ -48,11 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     final List<Widget> screens = [
-      HomeContent(address: widget.address),
-      HistoryScreen(userId: _userId,),
-      ProfileScreen(address: widget.address,),
+      HomeContent(address: widget.address, city: widget.city),
+      _userId == null
+          ? const Center(child: CircularProgressIndicator())
+          : HistoryScreen(userId: _userId!),
+      ProfileScreen(address: widget.address),
     ];
 
     return Scaffold(
@@ -68,7 +81,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class HomeContent extends StatefulWidget {
   final String address;
-  const HomeContent({super.key, required this.address});
+  final String city;
+  const HomeContent({super.key, required this.address, required this.city});
 
   @override
   State<HomeContent> createState() => _HomeContentState();
@@ -132,7 +146,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',
+                      serviceType: 'Domestic', city: widget.city,
                     ),
                   ),
                 ),
@@ -146,7 +160,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',
+                      serviceType: 'Domestic',city: widget.city,
                     ),
                   ),
                 ),
@@ -160,7 +174,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',
+                      serviceType: 'Domestic',city: widget.city,
                     ),
                   ),
                 ),
@@ -181,7 +195,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',
+                      serviceType: 'Domestic',city: widget.city,
                     ),
                   ),
                 ),
@@ -195,7 +209,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',
+                      serviceType: 'Domestic',city: widget.city,
                     ),
                   ),
                 ),
@@ -209,7 +223,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',
+                      serviceType: 'Domestic',city: widget.city,
                     ),
                   ),
                 ),
@@ -222,6 +236,7 @@ class _HomeContentState extends State<HomeContent> {
             address: widget.address,
             screenWidth: screenWidth,
             screenHeight: screenHeight,
+            city: widget.city,
           ),
         ],
       ),
