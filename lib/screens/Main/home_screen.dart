@@ -146,7 +146,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic', city: widget.city,
+                      serviceType: 'Quick', city: widget.city,
                     ),
                   ),
                 ),
@@ -160,7 +160,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',city: widget.city,
+                      serviceType: 'Quick',city: widget.city,
                     ),
                   ),
                 ),
@@ -174,7 +174,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',city: widget.city,
+                      serviceType: 'Quick',city: widget.city,
                     ),
                   ),
                 ),
@@ -195,7 +195,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',city: widget.city,
+                      serviceType: 'Quick',city: widget.city,
                     ),
                   ),
                 ),
@@ -209,7 +209,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',city: widget.city,
+                      serviceType: 'Quick',city: widget.city,
                     ),
                   ),
                 ),
@@ -223,7 +223,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',city: widget.city,
+                      serviceType: 'Quick',city: widget.city,
                     ),
                   ),
                 ),

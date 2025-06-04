@@ -9,7 +9,8 @@ class ServiceModel{
   final DateTime? createdAt;
   final String? categoryId;
   final String? location;
-  final String image; // Added for UI display
+  final String image;
+  final String mainDescription;
 
   ServiceModel({
     this.serviceId,
@@ -22,7 +23,8 @@ class ServiceModel{
     this.createdAt,
     this.categoryId,
     required this.image,
-    this.location,s
+    this.location,
+    required this.mainDescription,
   });
 
   // Helper to split description into bullet points

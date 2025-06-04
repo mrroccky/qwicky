@@ -54,7 +54,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                 MaterialPageRoute(
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
-                    serviceType: 'Domestic',
+                    serviceType: 'Extended',
                     city: widget.city,
                   ),
                 ),
@@ -69,7 +69,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                 MaterialPageRoute(
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
-                    serviceType: 'Domestic',
+                    serviceType: 'Extended',
                     city: widget.city,
                   ),
                 ),
@@ -84,7 +84,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                 MaterialPageRoute(
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
-                    serviceType: 'Domestic',
+                    serviceType: 'Extended',
                     city: widget.city,
                   ),
                 ),
@@ -106,7 +106,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                 MaterialPageRoute(
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
-                    serviceType: 'Domestic',
+                    serviceType: 'Extended',
                     city: widget.city,
                   ),
                 ),
@@ -121,7 +121,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                 MaterialPageRoute(
                   builder: (context) => MainServicesScreen(
                     address: widget.address,
-                    serviceType: 'Domestic',
+                    serviceType: 'Extended',
                     city: widget.city,
                   ),
                 ),

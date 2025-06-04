@@ -36,6 +36,10 @@ class _MainServicesScreenState extends State<MainServicesScreen> {
         return '2';
       case 'Corporate':
         return '3';
+      case 'Extended':
+        return '4';
+      case 'Quick':
+        return '5';
       default:
         return '1'; // Default to Domestic
     }
@@ -53,6 +57,12 @@ class _MainServicesScreenState extends State<MainServicesScreen> {
         break;
       case 'Corporate':
         title = 'Corporate Services';
+        break;
+      case 'Extended':
+        title = 'Extended Services';
+        break;
+      case 'Quick':
+        title = 'Quick Services';
         break;
       default:
         title = 'Services';

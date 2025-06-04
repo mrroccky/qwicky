@@ -23,17 +23,16 @@ class ServiceBloc extends Bloc<ServiceEvent, ServiceState> {
       if (response.statusCode == 200) {
         final List<dynamic> jsonData = jsonDecode(response.body);
         final services = jsonData.map((json) {
-          List<dynamic> descriptionList = [];
-          try {
-            descriptionList = jsonDecode(json['description'] as String);
-          } catch (e) {
-            descriptionList = [json['description'] as String];
-          }
+          // Handle description as a List<dynamic>
+          List<dynamic> descriptionList = json['description'] is List ? json['description'] : [];
+          // Handle main_description as a List<dynamic>
+          List<dynamic> mainDescriptionList = json['main_description'] is List ? json['main_description'] : [];
 
           return ServiceModel(
             serviceId: json['service_id'] as int,
             title: json['service_title'] as String,
             description: descriptionList.join('\n'),
+            mainDescription: mainDescriptionList.join('\n'),
             image: json['service_image'] as String,
             serviceType: json['service_type'] as String,
             serviceDuration: json['service_duration'] as String,
@@ -41,7 +40,7 @@ class ServiceBloc extends Bloc<ServiceEvent, ServiceState> {
             isActive: (json['is_active'] as int) == 1,
             createdAt: DateTime.parse(json['created_at'] as String),
             categoryId: json['category_id'] as String,
-            location: json['location'] as String?, // Parse location field
+            location: json['location'] as String?,
           );
         }).toList();
 

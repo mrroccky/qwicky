@@ -143,15 +143,15 @@ class ServiceCard extends StatefulWidget {
 class _ServiceCardState extends State<ServiceCard> {
   bool _showProfileForm = false;
 
-  List<String> getCleanDescriptionPoints() {
-    List<String> points = widget.service.description
-        .split(RegExp(r'\\\\n|\\n|\n'))
-        .map((point) => point.trim())
-        .where((point) => point.isNotEmpty)
-        .toList();
-    return points;
-  }
-
+List<String> getCleanDescriptionPoints() {
+  List<String> points = widget.service.description
+      .replaceAll(RegExp(r'[\[\]"]'), '')
+      .split(RegExp(r'\\\\n|\\n|\n')) 
+      .map((point) => point.replaceAll(RegExp(r'\\+'), '').trim()) 
+      .where((point) => point.isNotEmpty)
+      .toList();
+  return points;
+}
   Future<List<ServiceReview>> _fetchReviews() async {
     try {
       final String apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000/api';
@@ -216,6 +216,7 @@ class _ServiceCardState extends State<ServiceCard> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final cleanPoints = getCleanDescriptionPoints();
+    final isExtendedService = widget.service.categoryId == '4';
 
     return Stack(
       children: [
@@ -350,22 +351,24 @@ class _ServiceCardState extends State<ServiceCard> {
                           }).toList(),
                         ),
                         const SizedBox(height: 12),
+                       Text('₹ ${widget.service.price?.toStringAsFixed(2)}', style: TextStyle(fontSize: screenHeight*0.021),),
+                         const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             ElevatedButton(
-                              onPressed: () {
+                              onPressed: isExtendedService ? null : () {
                                 _checkProfileAndAddToCart(context);
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: appColor,
+                                backgroundColor: isExtendedService ? Colors.grey : appColor,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              child: const Text(
-                                'Add to Cart',
-                                style: TextStyle(color: Colors.white),
+                              child: Text(
+                                isExtendedService ? 'Coming Soon' : 'Add to Cart',
+                                style: const TextStyle(color: Colors.white),
                               ),
                             ),
                           ],
