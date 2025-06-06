@@ -30,7 +30,7 @@ class _CarouselSliderMainState extends State<CarouselSliderMain> {
     {
       'image': 'assets/banner3.png',
       'text': 'Secure Your Home!',
-      'serviceType': 'Domestic',
+      'serviceType': 'Commercial',
     },
   ];
 

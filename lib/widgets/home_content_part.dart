@@ -261,7 +261,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                   MaterialPageRoute(
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
-                      serviceType: 'Domestic',
+                      serviceType: 'Commercial',
                       city: widget.city,
                     ),
                   ),
@@ -278,7 +278,7 @@ class _HomeContentPartState extends State<HomeContentPart> {
                     builder: (context) => MainServicesScreen(
                       address: widget.address,
                       city: widget.city,
-                      serviceType: 'Domestic',
+                      serviceType: 'Commercial',
                     ),
                   ),
                 ),

@@ -43,12 +43,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (_userId == null) {
       print('No userId found in UserProvider, redirecting to login');
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User ID not found. Please log in again.')),
-        );
-        Navigator.of(context).pushReplacementNamed('/login');
-      });
+      // WidgetsBinding.instance.addPostFrameCallback((_) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     const SnackBar(content: Text('User ID not found. Please log in again.')),
+      //   );
+      //   Navigator.of(context).pushReplacementNamed('/login');
+      // });
     }
   }
 
