@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:qwicky/provider/user_provider.dart';
 import 'package:qwicky/screens/Main/bloc/cart_block_part/cart_bloc.dart';
 import 'package:qwicky/screens/Main/bloc/service_part/service_bloc.dart';
+import 'package:qwicky/screens/Main/location_permission_screen.dart';
 import 'package:qwicky/screens/onboarding/splash_screen.dart';
 
 void main() async{
@@ -33,7 +34,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF2075C5)),
         ),
-        home: const SplashScreen(),
+        home: const LocationPermissionScreen(),
       ),
     );
   }

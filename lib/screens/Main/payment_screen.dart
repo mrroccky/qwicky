@@ -48,29 +48,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     super.dispose();
   }
 
-  Future<int?> _getProfessionalId(int serviceId) async {
-    try {
-      final apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000';
-      final response = await http.get(
-        Uri.parse('$apiUrl/professionals/service/$serviceId'),
-        headers: {'Content-Type': 'application/json'},
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['professional_id'];
-      } else if (response.statusCode == 404) {
-        print('No professional found for service ID: $serviceId');
-        return null;
-      } else {
-        print('Failed to fetch professional_id: ${response.statusCode} - ${response.body}');
-        return null;
-      }
-    } catch (e) {
-      print('Error fetching professional_id: $e');
-      return null;
-    }
-  }
-
   Future<void> _clearCart(int userId) async {
     try {
       final apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000';
@@ -147,157 +124,157 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    print('Payment Success: ${response.paymentId}');
+  print('Payment Success: ${response.paymentId}');
 
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final userIdString = userProvider.userData?['user_id']?.toString();
-    final userId = userIdString != null ? int.tryParse(userIdString) : null;
+  final userProvider = Provider.of<UserProvider>(context, listen: false);
+  final userIdString = userProvider.userData?['user_id']?.toString();
+  final userId = userIdString != null ? int.tryParse(userIdString) : null;
 
-    if (userId == null) {
-      setState(() {
-        isLoading = false;
-        errorMessage = 'User not logged in';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in')),
+  if (userId == null) {
+    setState(() {
+      isLoading = false;
+      errorMessage = 'User not logged in';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('User not logged in')),
+    );
+    return;
+  }
+
+  final addressData = _getAddressData();
+  final apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000';
+  final bookingsCreated = <int>[];
+
+  try {
+    for (int i = 0; i < widget.cartItems.length; i++) {
+      final cartItem = widget.cartItems[i].value;
+      final serviceId = cartItem.service.serviceId;
+      final quantity = cartItem.quantity;
+      final dateTime = widget.selectedDateTimes[i];
+
+      final bookingAmount = (widget.totalAmount / widget.cartItems.fold(0, (sum, item) => sum + item.value.quantity)) * quantity;
+
+      double? latitude;
+      double? longitude;
+      try {
+        if (addressData['latitude'].isNotEmpty) {
+          latitude = double.parse(addressData['latitude']);
+        }
+      } catch (e) {
+        latitude = null;
+      }
+      try {
+        if (addressData['longitude'].isNotEmpty) {
+          longitude = double.parse(addressData['longitude']);
+        }
+      } catch (e) {
+        longitude = null;
+      }
+
+      final payload = {
+        'service_id': serviceId,
+        'user_id': userId,
+        'scheduled_date': DateFormat('yyyy-MM-dd').format(dateTime),
+        'scheduled_time': DateFormat('HH:mm:ss').format(dateTime),
+        'booking_type': null,
+        'status': 'pending',
+        'payment_status': 'completed',
+        'total_amount': bookingAmount,
+        'address_line': addressData['address_line'],
+        'city': addressData['city'],
+        'state': addressData['state'],
+        'country': addressData['country'],
+        'postal_code': addressData['postal_code'],
+        'latitude': latitude,
+        'longitude': longitude,
+        'created_at': DateTime.now().toUtc().toIso8601String().replaceAll('T', ' ').substring(0, 19),
+        // Remove professional_id from payload
+      };
+
+      print('Creating booking with payload: $payload');
+
+      final bookingResponse = await http.post(
+        Uri.parse('$apiUrl/bookings'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
       );
-      return;
+
+      if (bookingResponse.statusCode == 201) {
+        final data = jsonDecode(bookingResponse.body);
+        final bookingId = int.parse(data['booking_id'].toString());
+        bookingsCreated.add(bookingId);
+        print('Booking created successfully: $bookingId');
+
+        await _savePaymentToBackend(
+          userId,
+          bookingId,
+          response.paymentId!,
+          'Completed',
+        );
+      } else {
+        print('Booking creation failed for service ID $serviceId: ${bookingResponse.statusCode} - ${bookingResponse.body}');
+        throw Exception('Failed to create booking: ${bookingResponse.statusCode} - ${bookingResponse.body}');
+      }
     }
 
-    final addressData = _getAddressData();
-    final apiUrl = dotenv.env['BACK_END_API'] ?? 'http://192.168.1.37:3000';
-    final bookingsCreated = <int>[]; // Store booking IDs as integers
+    await _clearCart(userId);
 
-    try {
-      for (int i = 0; i < widget.cartItems.length; i++) {
-        final cartItem = widget.cartItems[i].value;
-        final serviceId = cartItem.service.serviceId;
-        final quantity = cartItem.quantity;
-        final dateTime = widget.selectedDateTimes[i];
-        final professionalId = await _getProfessionalId(serviceId!);
+    setState(() {
+      isLoading = false;
+    });
 
-        if (professionalId == null) {
-          throw Exception('No professional found for service ID: $serviceId');
-        }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Payment and bookings created successfully!')),
+    );
 
-        final bookingAmount = (widget.totalAmount / widget.cartItems.fold(0, (sum, item) => sum + item.value.quantity)) * quantity;
+    final userAddress = addressData['address_line'].isNotEmpty
+        ? addressData['address_line']
+        : 'Address not available';
+    final userCity = addressData['city'].isNotEmpty ? addressData['city'] : 'City not available';
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => HomeScreen(address: userAddress, city: userCity),
+      ),
+      (route) => false,
+    );
+  } catch (e, stackTrace) {
+    print('Error creating bookings after payment: $e');
+    print('Stack trace: $stackTrace');
+    setState(() {
+      isLoading = false;
+      errorMessage = 'Error creating bookings: $e';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
+    );
 
-        double? latitude;
-        double? longitude;
-        try {
-          if (addressData['latitude'].isNotEmpty) {
-            latitude = double.parse(addressData['latitude']);
-          }
-        } catch (e) {
-          latitude = null;
-        }
-        try {
-          if (addressData['longitude'].isNotEmpty) {
-            longitude = double.parse(addressData['longitude']);
-          }
-        } catch (e) {
-          longitude = null;
-        }
-
-        final payload = {
-          'service_id': serviceId,
-          'user_id': userId,
-          'professional_id': professionalId,
-          'scheduled_date': DateFormat('yyyy-MM-dd').format(dateTime),
-          'scheduled_time': DateFormat('HH:mm:ss').format(dateTime),
-          'booking_type': null,
-          'status': 'pending',
-          'payment_status': 'completed',
-          'total_amount': bookingAmount,
-          'address_line': addressData['address_line'],
-          'city': addressData['city'],
-          'state': addressData['state'],
-          'country': addressData['country'],
-          'postal_code': addressData['postal_code'],
-          'latitude': latitude,
-          'longitude': longitude,
-          'created_at': DateTime.now().toUtc().toIso8601String().replaceAll('T', ' ').substring(0, 19),
-        };
-
-        print('Creating booking with payload: $payload');
-
-        final bookingResponse = await http.post(
-          Uri.parse('$apiUrl/bookings'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(payload),
-        );
-
-        if (bookingResponse.statusCode == 201) {
-          final data = jsonDecode(bookingResponse.body);
-          final bookingId = int.parse(data['booking_id'].toString()); // Parse as integer
-          bookingsCreated.add(bookingId);
-          print('Booking created successfully: $bookingId');
-
-          await _savePaymentToBackend(
-            userId,
-            bookingId, // Integer
-            response.paymentId!, // String
-            'Completed',
-          );
-        } else {
-          print('Booking creation failed for service ID $serviceId: ${bookingResponse.statusCode} - ${bookingResponse.body}');
-          throw Exception('Failed to create booking: ${bookingResponse.statusCode} - ${bookingResponse.body}');
-        }
+    // Rollback successful bookings
+    for (var bookingId in bookingsCreated) {
+      try {
+        await http.delete(Uri.parse('$apiUrl/bookings/$bookingId'));
+        print('Rolled back booking ID: $bookingId');
+      } catch (rollbackError) {
+        print('Error rolling back booking ID $bookingId: $rollbackError');
       }
+    }
 
-      await _clearCart(userId);
-
-      setState(() {
-        isLoading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment and bookings created successfully!')),
-      );
-
-      final userAddress = addressData['address_line'].isNotEmpty
-          ? addressData['address_line']
-          : 'Address not available';
-      final userCity = addressData['city'].isNotEmpty ? addressData['city'] : 'City not available';
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(address: userAddress, city: userCity),
-        ),
-        (route) => false,
-      );
-    } catch (e, stackTrace) {
-      print('Error creating bookings after payment: $e');
-      print('Stack trace: $stackTrace');
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Error creating bookings: $e';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-
-      // Rollback successful bookings
-      for (var bookingId in bookingsCreated) {
-        try {
-          await http.delete(Uri.parse('$apiUrl/bookings/$bookingId'));
-          print('Rolled back booking ID: $bookingId');
-        } catch (rollbackError) {
-          print('Error rolling back booking ID $bookingId: $rollbackError');
-        }
-      }
-
+    // Only save failed payment if at least one booking was created
+    if (bookingsCreated.isNotEmpty) {
       try {
         await _savePaymentToBackend(
           userId,
-          bookingsCreated.isNotEmpty ? bookingsCreated.first : 0, // Fallback to 0
+          bookingsCreated.first,
           response.paymentId!,
           'Failed',
         );
       } catch (e) {
         print('Error saving failed payment: $e');
       }
+    } else {
+      print('No bookings created, skipping payment save');
     }
   }
+}
 
   void _handlePaymentError(PaymentFailureResponse response) async {
     final errorMessageText = response.error?['description'] ?? 'Unknown error';
@@ -333,83 +310,82 @@ class _PaymentScreenState extends State<PaymentScreen> {
     print('External Wallet: ${response.walletName}');
   }
 
-  Future<void> _createBookings() async {
+ Future<void> _createBookings() async {
+  setState(() {
+    isLoading = true;
+    errorMessage = null;
+  });
+
+  final userProvider = Provider.of<UserProvider>(context, listen: false);
+  final userIdString = userProvider.userData?['user_id']?.toString();
+  final userId = userIdString != null ? int.tryParse(userIdString) : null;
+
+  if (userId == null) {
     setState(() {
-      isLoading = true;
-      errorMessage = null;
+      isLoading = false;
+      errorMessage = 'User not logged in';
     });
-
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final userIdString = userProvider.userData?['user_id']?.toString();
-    final userId = userIdString != null ? int.tryParse(userIdString) : null;
-
-    if (userId == null) {
-      setState(() {
-        isLoading = false;
-        errorMessage = 'User not logged in';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in')),
-      );
-      return;
-    }
-
-    // Validate amount
-    if (widget.totalAmount < 1.0) {
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Amount must be at least ₹1.00';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Amount must be at least ₹1.00')),
-      );
-      return;
-    }
-
-    final userData = userProvider.userData;
-    final razorpayKey = dotenv.env['RAZORPAY_KEY_ID'];
-    if (razorpayKey == null || razorpayKey.isEmpty) {
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Razorpay key not configured';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment configuration error')),
-      );
-      return;
-    }
-
-    final options = {
-      'key': razorpayKey,
-      'amount': (widget.totalAmount * 100).toInt(),
-      'name': 'Qwicky',
-      'description': 'Payment for booking services',
-      'currency': 'INR',
-      'prefill': {
-        'contact': _validatePhoneNumber(userData?['phone_number']?.toString() ?? ''),
-        'email': _validateEmail(userData?['email']?.toString() ?? ''),
-      },
-      'theme': {'color': '#3399cc'},
-      'external': {'wallets': ['paytm']},
-      'retry': {'enabled': true, 'max_count': 3},
-      'timeout': 300,
-    };
-
-    try {
-      _razorpay.open(options);
-    } catch (e, stackTrace) {
-      print('Error initiating payment: $e');
-      print('Stack trace: $stackTrace');
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Error initiating payment: $e';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error initiating payment: $e')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('User not logged in')),
+    );
+    return;
   }
 
+  // Validate amount
+  if (widget.totalAmount < 1.0) {
+    setState(() {
+      isLoading = false;
+      errorMessage = 'Amount must be at least ₹1.00';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Amount must be at least ₹1.00')),
+    );
+    return;
+  }
+
+  final userData = userProvider.userData;
+  final razorpayKey = dotenv.env['RAZORPAY_KEY_ID'];
+  if (razorpayKey == null || razorpayKey.isEmpty) {
+    setState(() {
+      isLoading = false;
+      errorMessage = 'Razorpay key not configured';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Payment configuration error')),
+    );
+    return;
+  }
+
+  final options = {
+    'key': razorpayKey,
+    'amount': (widget.totalAmount * 100).toInt(),
+    'name': 'Qwicky',
+    'description': 'Payment for booking services',
+    'currency': 'INR',
+    'prefill': {
+      'contact': _validatePhoneNumber(userData?['phone_number']?.toString() ?? ''),
+      'email': _validateEmail(userData?['email']?.toString() ?? ''),
+    },
+    'theme': {'color': '#3399cc'},
+    'external': {'wallets': ['paytm']},
+    'retry': {'enabled': true, 'max_count': 3},
+    'timeout': 300,
+  };
+
+  try {
+    _razorpay.open(options);
+  } catch (e, stackTrace) {
+    print('Error initiating payment: $e');
+    print('Stack trace: $stackTrace');
+    setState(() {
+      isLoading = false;
+      errorMessage = 'Error initiating payment: $e';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error initiating payment: $e')),
+    );
+  }
+}
   String _validatePhoneNumber(String phone) {
     final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
     if (cleanPhone.length == 10) {

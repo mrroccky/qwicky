@@ -313,7 +313,6 @@ class _HistoryCardState extends State<HistoryCard> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: RatingWidget(
-                                      professionalId: widget.service.professionalId,
                                       bookingId: widget.service.bookingId,
                                       userId: widget.userId,
                                       targetId: widget.service.serviceId,
@@ -337,7 +336,6 @@ class _HistoryCardState extends State<HistoryCard> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: RatingWidget(
-                                      professionalId: widget.service.professionalId,
                                       bookingId: widget.service.bookingId,
                                       userId: widget.userId,
                                       targetId: widget.service.professionalId,
@@ -385,9 +383,9 @@ class _HistoryCardState extends State<HistoryCard> {
   }
 }
 
-extension StringExtension on String {
+extension StringCapitalize on String {
   String capitalize() {
     if (isEmpty) return this;
-    return '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
+    return '${this[0].toUpperCase()}${substring(1)}';
   }
 }

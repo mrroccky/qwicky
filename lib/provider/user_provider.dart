@@ -9,9 +9,24 @@ class UserProvider with ChangeNotifier {
   bool _isEditing = false;
   String? _lastVerifiedPhoneNumber;
 
+  // Constructor to set manual test data automatically
+  UserProvider() {
+    _setInitialTestData();
+  }
+
   Map<String, dynamic>? get userData => _userData;
   bool get isEditing => _isEditing;
   String? get lastVerifiedPhoneNumber => _lastVerifiedPhoneNumber;
+
+  // Set initial test data
+  void _setInitialTestData() {
+    _userData = {
+      'user_id': 1,
+      'phone_number': '1234567890',
+    };
+    _lastVerifiedPhoneNumber = '1234567890';
+    print('Initial test data set: $_userData');
+  }
 
   void setUserData(Map<String, dynamic>? data) {
     _userData = data;
@@ -20,6 +35,22 @@ class UserProvider with ChangeNotifier {
 
   void setEditing(bool value) {
     _isEditing = value;
+    notifyListeners();
+  }
+
+  // Manual test data method - for testing purposes only
+  Future<void> setManualTestData() async {
+    _userData = {
+      'user_id': 1,
+      'phone_number': '1234567890',
+    };
+    _lastVerifiedPhoneNumber = '1234567890';
+    
+    // Save userId to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('userId', '1');
+    print('Manual test data set: $_userData');
+    
     notifyListeners();
   }
 
